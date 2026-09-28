@@ -1,0 +1,6 @@
+{
+  "name": "SahabatSekolah",
+  "description": "Aplikasi penghubung guru dan orang tua untuk memantau perkembangan belajar, tabungan siswa, notifikasi jam pulang, absensi harian, dan galeri kegiatan.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

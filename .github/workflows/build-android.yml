@@ -1,0 +1,139 @@
+name: Build Android APK & AAB
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  pull_request:
+    branches: [ "main", "master" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build Release APK and AAB
+    runs-on: ubuntu-latest
+
+    env:
+      STORE_PASSWORD: ${{ secrets.STORE_PASSWORD || 'sahabatsekolah123' }}
+      KEY_PASSWORD: ${{ secrets.KEY_PASSWORD || 'sahabatsekolah123' }}
+
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Accept Android SDK Licenses
+        run: |
+          mkdir -p "$ANDROID_HOME/licenses"
+          echo "24333f8a63b6825ea9c5514f83c2829b004d1fee" > "$ANDROID_HOME/licenses/android-sdk-license"
+          echo "84831b9409646a918e30573bab4c9c91346d8abd" > "$ANDROID_HOME/licenses/android-sdk-preview-license"
+          echo "d56f5187479451eabf01fb78af6dfcb131a6481e" >> "$ANDROID_HOME/licenses/android-sdk-license"
+          yes | sdkmanager --licenses 2>/dev/null || true
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "9.3.1"
+
+      - name: Prepare Keystores & Environment
+        run: |
+          # 1. Pastikan file .env ada
+          touch .env
+          if [ -f ".env.example" ]; then
+            cp .env.example .env
+          fi
+
+          # 2. Setup Password
+          PASS="${STORE_PASSWORD}"
+
+          # 3. Generate Release Keystore jika belum ada (buat di root dan di subfolder app agar pasti terbaca)
+          if [ ! -f "my-upload-key.jks" ]; then
+            echo "Membuat Release Keystore otomatis..."
+            keytool -genkeypair \
+              -v \
+              -keystore "my-upload-key.jks" \
+              -alias "upload" \
+              -keyalg RSA \
+              -keysize 2048 \
+              -validity 10000 \
+              -storepass "$PASS" \
+              -keypass "$PASS" \
+              -dname "CN=SahabatSekolah, OU=Mobile, O=SahabatSekolah, L=Jakarta, ST=DKI, C=ID"
+          fi
+
+          # Salin juga ke folder app/ untuk redundansi
+          mkdir -p app
+          cp "my-upload-key.jks" "app/my-upload-key.jks"
+
+          # 4. Generate Debug Keystore jika belum ada
+          if [ -f "debug.keystore.base64" ]; then
+            base64 -d "debug.keystore.base64" > "debug.keystore"
+          else
+            keytool -genkeypair \
+              -v \
+              -keystore "debug.keystore" \
+              -alias "androiddebugkey" \
+              -keyalg RSA \
+              -keysize 2048 \
+              -validity 10000 \
+              -storepass "android" \
+              -keypass "android" \
+              -dname "CN=Android Debug, O=Android, C=US"
+          fi
+          cp "debug.keystore" "app/debug.keystore" 2>/dev/null || true
+
+      - name: Ensure Gradle Wrapper
+        run: |
+          if [ ! -f "./gradlew" ]; then
+            echo "Membuat gradlew wrapper..."
+            gradle wrapper --gradle-version 9.3.1
+          fi
+          chmod +x ./gradlew
+
+      - name: Build Release APK
+        env:
+          KEYSTORE_PATH: ${{ github.workspace }}/my-upload-key.jks
+          STORE_PASSWORD: ${{ env.STORE_PASSWORD }}
+          KEY_PASSWORD: ${{ env.KEY_PASSWORD }}
+        run: |
+          CMD="./gradlew"
+          if [ ! -f "./gradlew" ]; then CMD="gradle"; fi
+          $CMD :app:assembleRelease --no-configuration-cache -x test -x lint -x lintVitalRelease -x lintVitalAnalyzeRelease -x lintVitalReportRelease --stacktrace
+
+      - name: Build Release AAB (Google Play)
+        env:
+          KEYSTORE_PATH: ${{ github.workspace }}/my-upload-key.jks
+          STORE_PASSWORD: ${{ env.STORE_PASSWORD }}
+          KEY_PASSWORD: ${{ env.KEY_PASSWORD }}
+        run: |
+          CMD="./gradlew"
+          if [ ! -f "./gradlew" ]; then CMD="gradle"; fi
+          $CMD :app:bundleRelease --no-configuration-cache -x test -x lint -x lintVitalRelease -x lintVitalAnalyzeRelease -x lintVitalReportRelease --stacktrace
+
+      - name: Build Debug APK
+        run: |
+          CMD="./gradlew"
+          if [ ! -f "./gradlew" ]; then CMD="gradle"; fi
+          $CMD :app:assembleDebug --no-configuration-cache -x test -x lint --stacktrace
+
+      - name: Upload Release & Debug APK
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: SahabatSekolah-APKs
+          path: app/build/outputs/apk/**/*.apk
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Upload Release AAB (Google Play)
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: SahabatSekolah-AAB-Bundle
+          path: app/build/outputs/bundle/**/*.aab
+          if-no-files-found: warn
+          retention-days: 14

@@ -1,0 +1,359 @@
+package com.example
+
+import android.os.Bundle
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Chat
+import androidx.compose.material.icons.filled.AccountBalanceWallet
+import androidx.compose.material.icons.filled.Collections
+import androidx.compose.material.icons.filled.Grade
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.HowToReg
+import androidx.compose.material3.Icon
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.ui.AppScreen
+import com.example.ui.SchoolViewModel
+import com.example.ui.components.AppTopHeader
+import com.example.ui.components.SupabaseConfigDialog
+import com.example.ui.screens.AcademicScreen
+import com.example.ui.screens.AnnouncementScreen
+import com.example.ui.screens.AttendanceScreen
+import com.example.ui.screens.CalendarScreen
+import com.example.ui.screens.ChatScreen
+import com.example.ui.screens.ExamScreen
+import com.example.ui.screens.GalleryScreen
+import com.example.ui.screens.HomeScreen
+import com.example.ui.screens.SavingsScreen
+import com.example.ui.theme.MyApplicationTheme
+import com.example.ui.theme.PastelPeach
+import com.example.ui.theme.PastelPeachLight
+import com.example.ui.theme.SoftBackground
+
+class MainActivity : ComponentActivity() {
+  override fun onCreate(savedInstanceState: Bundle?) {
+    super.onCreate(savedInstanceState)
+    enableEdgeToEdge()
+    setContent {
+      MyApplicationTheme {
+        SchoolParentApp()
+      }
+    }
+  }
+}
+
+@Composable
+fun SchoolParentApp(viewModel: SchoolViewModel = viewModel()) {
+  val student by viewModel.student.collectAsStateWithLifecycle()
+  val currentRole by viewModel.currentRole.collectAsStateWithLifecycle()
+  val currentScreen by viewModel.currentScreen.collectAsStateWithLifecycle()
+  val dismissalAlert by viewModel.dismissalAlert.collectAsStateWithLifecycle()
+  val pickupQueues by viewModel.pickupQueues.collectAsStateWithLifecycle()
+  val academicReports by viewModel.academicReports.collectAsStateWithLifecycle()
+  val savingTransactions by viewModel.savingTransactions.collectAsStateWithLifecycle()
+  val totalSavings by viewModel.totalSavings.collectAsStateWithLifecycle()
+  val attendanceRecords by viewModel.attendanceRecords.collectAsStateWithLifecycle()
+  val activities by viewModel.activities.collectAsStateWithLifecycle()
+  val chatMessages by viewModel.chatMessages.collectAsStateWithLifecycle()
+  val examSchedules by viewModel.examSchedules.collectAsStateWithLifecycle()
+  val academicCalendarEvents by viewModel.academicCalendarEvents.collectAsStateWithLifecycle()
+  val announcements by viewModel.announcements.collectAsStateWithLifecycle()
+  val snackbarEvent by viewModel.snackbarEvent.collectAsStateWithLifecycle()
+  val isSupabaseConfigured by viewModel.isSupabaseConfigured.collectAsStateWithLifecycle()
+  val isSyncing by viewModel.isSyncing.collectAsStateWithLifecycle()
+
+  var showSupabaseDialog by remember { mutableStateOf(false) }
+
+  val snackbarHostState = remember { SnackbarHostState() }
+
+  LaunchedEffect(snackbarEvent) {
+    snackbarEvent?.let { message ->
+      snackbarHostState.showSnackbar(message)
+      viewModel.clearSnackbar()
+    }
+  }
+
+  val showBottomNav = currentScreen in listOf(
+    AppScreen.HOME,
+    AppScreen.ACADEMIC,
+    AppScreen.SAVINGS,
+    AppScreen.ATTENDANCE,
+    AppScreen.GALLERY,
+    AppScreen.CHAT
+  )
+
+  Scaffold(
+    modifier = Modifier
+      .fillMaxSize()
+      .windowInsetsPadding(WindowInsets.statusBars),
+    containerColor = SoftBackground,
+    snackbarHost = { SnackbarHost(snackbarHostState) },
+    bottomBar = {
+      if (showBottomNav) {
+        NavigationBar(
+          containerColor = Color.White,
+          tonalElevation = 6.dp,
+          modifier = Modifier
+            .windowInsetsPadding(WindowInsets.navigationBars)
+            .testTag("main_bottom_nav")
+        ) {
+          NavigationBarItem(
+            selected = currentScreen == AppScreen.HOME,
+            onClick = { viewModel.navigateTo(AppScreen.HOME) },
+            icon = { Icon(Icons.Default.Home, contentDescription = "Beranda") },
+            label = { Text("Beranda", fontSize = 11.sp, fontWeight = FontWeight.SemiBold) },
+            colors = NavigationBarItemDefaults.colors(
+              indicatorColor = PastelPeachLight,
+              selectedIconColor = PastelPeach,
+              selectedTextColor = PastelPeach
+            )
+          )
+
+          NavigationBarItem(
+            selected = currentScreen == AppScreen.ACADEMIC,
+            onClick = { viewModel.navigateTo(AppScreen.ACADEMIC) },
+            icon = { Icon(Icons.Default.Grade, contentDescription = "Rapor") },
+            label = { Text("Rapor", fontSize = 11.sp, fontWeight = FontWeight.SemiBold) },
+            colors = NavigationBarItemDefaults.colors(
+              indicatorColor = PastelPeachLight,
+              selectedIconColor = PastelPeach,
+              selectedTextColor = PastelPeach
+            )
+          )
+
+          NavigationBarItem(
+            selected = currentScreen == AppScreen.SAVINGS,
+            onClick = { viewModel.navigateTo(AppScreen.SAVINGS) },
+            icon = { Icon(Icons.Default.AccountBalanceWallet, contentDescription = "Tabungan") },
+            label = { Text("Tabungan", fontSize = 11.sp, fontWeight = FontWeight.SemiBold) },
+            colors = NavigationBarItemDefaults.colors(
+              indicatorColor = PastelPeachLight,
+              selectedIconColor = PastelPeach,
+              selectedTextColor = PastelPeach
+            )
+          )
+
+          NavigationBarItem(
+            selected = currentScreen == AppScreen.ATTENDANCE,
+            onClick = { viewModel.navigateTo(AppScreen.ATTENDANCE) },
+            icon = { Icon(Icons.Default.HowToReg, contentDescription = "Absensi") },
+            label = { Text("Absensi", fontSize = 11.sp, fontWeight = FontWeight.SemiBold) },
+            colors = NavigationBarItemDefaults.colors(
+              indicatorColor = PastelPeachLight,
+              selectedIconColor = PastelPeach,
+              selectedTextColor = PastelPeach
+            )
+          )
+
+          NavigationBarItem(
+            selected = currentScreen == AppScreen.GALLERY,
+            onClick = { viewModel.navigateTo(AppScreen.GALLERY) },
+            icon = { Icon(Icons.Default.Collections, contentDescription = "Galeri") },
+            label = { Text("Galeri", fontSize = 11.sp, fontWeight = FontWeight.SemiBold) },
+            colors = NavigationBarItemDefaults.colors(
+              indicatorColor = PastelPeachLight,
+              selectedIconColor = PastelPeach,
+              selectedTextColor = PastelPeach
+            )
+          )
+
+          NavigationBarItem(
+            selected = currentScreen == AppScreen.CHAT,
+            onClick = { viewModel.navigateTo(AppScreen.CHAT) },
+            icon = { Icon(Icons.AutoMirrored.Filled.Chat, contentDescription = "Pesan") },
+            label = { Text("Pesan", fontSize = 11.sp, fontWeight = FontWeight.SemiBold) },
+            colors = NavigationBarItemDefaults.colors(
+              indicatorColor = PastelPeachLight,
+              selectedIconColor = PastelPeach,
+              selectedTextColor = PastelPeach
+            )
+          )
+        }
+      }
+    }
+  ) { innerPadding ->
+    Column(
+      modifier = Modifier
+        .fillMaxSize()
+        .padding(innerPadding)
+    ) {
+      // Top header with role switcher (only shown on Home screen to keep sub-screens clean with TopAppBar)
+      if (currentScreen == AppScreen.HOME) {
+        AppTopHeader(
+          student = student,
+          currentRole = currentRole,
+          isSupabaseConfigured = isSupabaseConfigured,
+          isSyncing = isSyncing,
+          onSwitchRole = { viewModel.switchRole(it) },
+          onOpenSupabaseConfig = { showSupabaseDialog = true }
+        )
+      }
+
+      if (showSupabaseDialog) {
+        SupabaseConfigDialog(
+          initialUrl = viewModel.getSupabaseUrl(),
+          initialKey = viewModel.getSupabaseAnonKey(),
+          isConfigured = isSupabaseConfigured,
+          sqlSchema = viewModel.getSqlSchema(),
+          onSave = { url, key -> viewModel.saveSupabaseConfig(url, key) },
+          onTestConnection = { url, key, callback ->
+            viewModel.testSupabaseConnection(url, key, callback)
+          },
+          onDismiss = { showSupabaseDialog = false }
+        )
+      }
+
+      Box(modifier = Modifier.weight(1f)) {
+        AnimatedContent(
+          targetState = currentScreen,
+          transitionSpec = { fadeIn() togetherWith fadeOut() },
+          label = "ScreenTransition"
+        ) { screen ->
+          when (screen) {
+            AppScreen.HOME -> HomeScreen(
+              student = student,
+              currentRole = currentRole,
+              dismissalAlert = dismissalAlert,
+              pickupQueues = pickupQueues,
+              latestReport = academicReports.firstOrNull(),
+              totalSavings = totalSavings,
+              latestAttendance = attendanceRecords.firstOrNull(),
+              recentActivities = activities,
+              calendarEvents = academicCalendarEvents,
+              announcements = announcements,
+              onNavigateTo = { viewModel.navigateTo(it) },
+              onBroadcastDismissal = { dismissed, time, msg ->
+                viewModel.broadcastDismissal(dismissed, time, msg)
+              },
+              onNotifyParentArrival = { gate ->
+                viewModel.notifyParentArrival(gate)
+              },
+              onUpdatePickupStatus = { id, st ->
+                viewModel.updatePickupStatus(id, st)
+              },
+              onLikeActivity = { id ->
+                viewModel.likeActivity(id)
+              }
+            )
+
+            AppScreen.ACADEMIC -> AcademicScreen(
+              reports = academicReports,
+              currentRole = currentRole,
+              onAddReport = { sub, sc, cat, fb, bd ->
+                viewModel.addAcademicReport(sub, sc, cat, fb, bd)
+              },
+              onNavigateBack = { viewModel.navigateTo(AppScreen.HOME) }
+            )
+
+            AppScreen.SAVINGS -> SavingsScreen(
+              transactions = savingTransactions,
+              totalBalance = totalSavings,
+              currentRole = currentRole,
+              onAddSavings = { amt, tp, nt ->
+                viewModel.addSavings(amt, tp, nt)
+              },
+              onNavigateBack = { viewModel.navigateTo(AppScreen.HOME) }
+            )
+
+            AppScreen.ATTENDANCE -> AttendanceScreen(
+              records = attendanceRecords,
+              currentRole = currentRole,
+              onSubmitPermission = { st, nt ->
+                viewModel.submitAttendancePermission(st, nt)
+              },
+              onNavigateBack = { viewModel.navigateTo(AppScreen.HOME) }
+            )
+
+            AppScreen.GALLERY -> GalleryScreen(
+              activities = activities,
+              currentRole = currentRole,
+              onLikeActivity = { viewModel.likeActivity(it) },
+              onAddActivity = { tit, cat, desc, pht ->
+                viewModel.addActivity(tit, cat, desc, pht)
+              },
+              onNavigateBack = { viewModel.navigateTo(AppScreen.HOME) }
+            )
+
+            AppScreen.CHAT -> ChatScreen(
+              messages = chatMessages,
+              currentRole = currentRole,
+              onSendMessage = { viewModel.sendMessage(it) },
+              onNavigateBack = { viewModel.navigateTo(AppScreen.HOME) }
+            )
+
+            AppScreen.EXAM -> ExamScreen(
+              exams = examSchedules,
+              onNavigateBack = { viewModel.navigateTo(AppScreen.HOME) }
+            )
+
+            AppScreen.CALENDAR -> CalendarScreen(
+              events = academicCalendarEvents,
+              currentRole = currentRole,
+              onAddEvent = { title, date, timeRange, targetClass, category, location, description, requiredItems ->
+                viewModel.addCalendarEvent(title, date, timeRange, targetClass, category, location, description, requiredItems)
+              },
+              onUpdateRsvp = { id, status ->
+                viewModel.updateEventRsvp(id, status)
+              },
+              onToggleCheckedItem = { event, item ->
+                viewModel.toggleEventCheckedItem(event, item)
+              },
+              onDeleteEvent = { id ->
+                viewModel.deleteCalendarEvent(id)
+              },
+              onNavigateBack = { viewModel.navigateTo(AppScreen.HOME) }
+            )
+
+            AppScreen.ANNOUNCEMENT -> AnnouncementScreen(
+              announcements = announcements,
+              currentRole = currentRole,
+              onAddAnnouncement = { title, letterNumber, category, targetAudience, content, isPinned, attachmentTitle ->
+                viewModel.addAnnouncement(title, letterNumber, category, targetAudience, content, isPinned, attachmentTitle)
+              },
+              onMarkAsRead = { id, isRead ->
+                viewModel.markAnnouncementAsRead(id, isRead)
+              },
+              onDeleteAnnouncement = { id ->
+                viewModel.deleteAnnouncement(id)
+              },
+              onNavigateBack = { viewModel.navigateTo(AppScreen.HOME) }
+            )
+          }
+        }
+      }
+    }
+  }
+}
