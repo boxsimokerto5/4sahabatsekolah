@@ -35,7 +35,8 @@ import java.util.Locale
 enum class UserRole {
   PARENT, // Bunda / Wali Murid
   TEACHER, // Bu Guru / Wali Kelas
-  ADMIN // Kepala Sekolah / Tata Usaha
+  ADMIN, // Kepala Sekolah / Tata Usaha
+  SUPERADMIN // Platform Master / Approval Authority
 }
 
 data class LoggedInAccount(
@@ -53,6 +54,7 @@ enum class AppScreen {
   SCHOOL_REGISTRATION,
   HOME,
   ADMIN_DASHBOARD,
+  SUPERADMIN_DASHBOARD,
   ACADEMIC,
   SAVINGS,
   ATTENDANCE,
@@ -141,6 +143,9 @@ class SchoolViewModel(application: Application) : AndroidViewModel(application) 
   val schoolProfile: StateFlow<SchoolProfile?> = repository.schoolProfile
     .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
+  val allSchoolProfiles: StateFlow<List<SchoolProfile>> = repository.allSchoolProfiles
+    .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
   val classrooms: StateFlow<List<ClassroomRoom>> = repository.classrooms
     .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
@@ -156,6 +161,18 @@ class SchoolViewModel(application: Application) : AndroidViewModel(application) 
     val schoolTitle = currentProf?.schoolName ?: "SD Ceria Bangsa"
 
     when (role) {
+      UserRole.SUPERADMIN -> {
+        _loggedInAccount.value = LoggedInAccount(
+          username = "gecckocreator",
+          fullName = "Superadministrator",
+          role = UserRole.SUPERADMIN,
+          roleTitle = "Platform Master Superadmin",
+          schoolName = "SahabatSekolah Enterprise Network",
+          classOrNis = "Hak Akses: Penuh (National Overseer)"
+        )
+        _currentScreen.value = AppScreen.SUPERADMIN_DASHBOARD
+        _snackbarEvent.value = "Beralih ke mode: Superadmin (gecckocreator)"
+      }
       UserRole.ADMIN -> {
         _loggedInAccount.value = LoggedInAccount(
           username = currentProf?.adminUsername ?: "admin",
@@ -201,24 +218,58 @@ class SchoolViewModel(application: Application) : AndroidViewModel(application) 
     val currentProf = schoolProfile.value
     val schoolTitle = currentProf?.schoolName ?: "SD Ceria Bangsa"
 
-    // 1. Check Admin
-    val isAdminUser = trimmedUser == "admin" || trimmedUser == "mulyono" || (currentProf != null && trimmedUser == currentProf.adminUsername.lowercase())
-    val isAdminPass = trimmedPass == "admin" || trimmedPass == "123456" || (currentProf != null && trimmedPass == currentProf.adminPassword)
-
-    if (isAdminUser && isAdminPass) {
+    // 0. Check Superadmin (gecckocreator / Woyowoyo12@)
+    if (trimmedUser == "gecckocreator" && trimmedPass == "Woyowoyo12@") {
       val account = LoggedInAccount(
-        username = currentProf?.adminUsername ?: "admin",
-        fullName = currentProf?.principalName ?: "Drs. H. Mulyono, M.Pd",
+        username = "gecckocreator",
+        fullName = "Superadministrator",
+        role = UserRole.SUPERADMIN,
+        roleTitle = "Platform Master Superadmin",
+        schoolName = "SahabatSekolah Enterprise Network",
+        classOrNis = "Hak Akses: Penuh (National Overseer)"
+      )
+      _currentRole.value = UserRole.SUPERADMIN
+      _loggedInAccount.value = account
+      _isLoggedIn.value = true
+      _currentScreen.value = AppScreen.SUPERADMIN_DASHBOARD
+      _snackbarEvent.value = "Selamat datang, Superadmin! Portal Verifikasi & Monitoring Sekolah aktif. 🛡️"
+      return true
+    }
+
+    // 1. Check Admin (Search across registered school profiles)
+    val matchedSchool = allSchoolProfiles.value.find {
+      it.adminUsername.trim().lowercase() == trimmedUser && it.adminPassword == trimmedPass
+    } ?: if ((trimmedUser == "admin" || trimmedUser == "mulyono") && (trimmedPass == "admin" || trimmedPass == "123456")) {
+      currentProf
+    } else null
+
+    if (matchedSchool != null) {
+      if (matchedSchool.status == "PENDING") {
+        _snackbarEvent.value = "Pendaftaran '${matchedSchool.schoolName}' masih MENUNGGU PERSETUJUAN Superadmin (gecckocreator). Harap tunggu proses verifikasi berkas."
+        return false
+      }
+      if (matchedSchool.status == "REJECTED") {
+        _snackbarEvent.value = "Pendaftaran '${matchedSchool.schoolName}' DITOLAK: ${matchedSchool.rejectionReason.ifBlank { "Dokumen penugasan tidak valid." }}"
+        return false
+      }
+      if (matchedSchool.status == "SUSPENDED") {
+        _snackbarEvent.value = "Akun sekolah '${matchedSchool.schoolName}' sedang DITANGGUHKAN oleh Superadmin."
+        return false
+      }
+
+      val account = LoggedInAccount(
+        username = matchedSchool.adminUsername,
+        fullName = matchedSchool.principalName,
         role = UserRole.ADMIN,
         roleTitle = "Kepala Sekolah / Admin Lembaga",
-        schoolName = schoolTitle,
-        classOrNis = "NPSN: ${currentProf?.npsn ?: "20104829"}"
+        schoolName = matchedSchool.schoolName,
+        classOrNis = "NPSN: ${matchedSchool.npsn}"
       )
       _currentRole.value = UserRole.ADMIN
       _loggedInAccount.value = account
       _isLoggedIn.value = true
       _currentScreen.value = AppScreen.ADMIN_DASHBOARD
-      _snackbarEvent.value = "Selamat datang, ${account.fullName}! Dashboard Admin Sekolah aktif. 🏢"
+      _snackbarEvent.value = "Selamat datang, ${account.fullName}! Dashboard Admin ${matchedSchool.schoolName} aktif. 🏢"
       return true
     }
 
@@ -284,6 +335,10 @@ class SchoolViewModel(application: Application) : AndroidViewModel(application) 
 
   fun quickLoginAsAdmin() {
     login("admin", "admin")
+  }
+
+  fun quickLoginAsSuperadmin() {
+    login("gecckocreator", "Woyowoyo12@")
   }
 
   fun logout() {
@@ -556,20 +611,8 @@ class SchoolViewModel(application: Application) : AndroidViewModel(application) 
         adminPassword = adminPassword
       )
 
-      // Auto login as newly registered school admin
-      val account = LoggedInAccount(
-        username = adminUsername,
-        fullName = applicantName,
-        role = UserRole.ADMIN,
-        roleTitle = applicantRole,
-        schoolName = schoolName,
-        classOrNis = "NPSN: $npsn"
-      )
-      _currentRole.value = UserRole.ADMIN
-      _loggedInAccount.value = account
-      _isLoggedIn.value = true
-      _currentScreen.value = AppScreen.ADMIN_DASHBOARD
-      _snackbarEvent.value = "Pendaftaran $schoolName berhasil! Akun Admin Anda telah aktif. 🎉"
+      _currentScreen.value = AppScreen.LOGIN
+      _snackbarEvent.value = "Pendaftaran $schoolName terkirim! Menunggu verifikasi SK & persetujuan Superadmin (gecckocreator). ⏳"
     }
   }
 
@@ -643,5 +686,51 @@ class SchoolViewModel(application: Application) : AndroidViewModel(application) 
       repository.deleteParentStudentAccount(id)
       _snackbarEvent.value = "Akun orang tua/siswa berhasil dihapus."
     }
+  }
+
+  // Superadmin Management Operations
+  fun approveSchoolRegistration(schoolId: Long) {
+    viewModelScope.launch {
+      repository.approveSchoolRegistration(schoolId)
+      val school = allSchoolProfiles.value.find { it.id == schoolId }
+      _snackbarEvent.value = "Pendaftaran '${school?.schoolName ?: "Sekolah"}' berhasil DISETUJUI & Diterbitkan! ✅"
+    }
+  }
+
+  fun rejectSchoolRegistration(schoolId: Long, reason: String) {
+    viewModelScope.launch {
+      repository.rejectSchoolRegistration(schoolId, reason)
+      val school = allSchoolProfiles.value.find { it.id == schoolId }
+      _snackbarEvent.value = "Pendaftaran '${school?.schoolName ?: "Sekolah"}' DITOLAK."
+    }
+  }
+
+  fun toggleSchoolSuspension(schoolId: Long, currentStatus: String) {
+    viewModelScope.launch {
+      repository.toggleSchoolSuspension(schoolId, currentStatus)
+      val action = if (currentStatus == "SUSPENDED") "diaktifkan kembali" else "ditangguhkan"
+      _snackbarEvent.value = "Status operasional sekolah berhasil $action."
+    }
+  }
+
+  fun deleteSchoolProfile(schoolId: Long) {
+    viewModelScope.launch {
+      repository.deleteSchoolProfile(schoolId)
+      _snackbarEvent.value = "Data profil sekolah telah dihapus dari direktori."
+    }
+  }
+
+  fun impersonateSchool(school: SchoolProfile) {
+    _loggedInAccount.value = LoggedInAccount(
+      username = school.adminUsername,
+      fullName = "${school.principalName} (Superadmin View)",
+      role = UserRole.ADMIN,
+      roleTitle = "Mode Monitoring Superadmin",
+      schoolName = school.schoolName,
+      classOrNis = "NPSN: ${school.npsn}"
+    )
+    _currentRole.value = UserRole.ADMIN
+    _currentScreen.value = AppScreen.ADMIN_DASHBOARD
+    _snackbarEvent.value = "Beralih ke Dashboard Admin: ${school.schoolName}"
   }
 }

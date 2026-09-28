@@ -38,7 +38,7 @@ import com.example.data.model.TeacherAccount
     TeacherAccount::class,
     ParentStudentAccount::class
   ],
-  version = 4,
+  version = 5,
   exportSchema = false
 )
 abstract class SchoolDatabase : RoomDatabase() {

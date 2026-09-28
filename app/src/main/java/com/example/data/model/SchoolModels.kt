@@ -154,7 +154,13 @@ data class SchoolProfile(
   val assignmentLetterFileName: String = "SK_Penugasan_Kepala_Sekolah_2026.pdf",
   val adminUsername: String = "admin",
   val adminPassword: String = "admin",
-  val isVerified: Boolean = true
+  val isVerified: Boolean = true,
+  val status: String = "VERIFIED", // "PENDING", "VERIFIED", "REJECTED", "SUSPENDED"
+  val rejectionReason: String = "",
+  val registeredAt: String = "28 Sep 2026",
+  val totalClassrooms: Int = 3,
+  val totalTeachers: Int = 3,
+  val totalStudents: Int = 86
 )
 
 @Entity(tableName = "classroom_rooms")

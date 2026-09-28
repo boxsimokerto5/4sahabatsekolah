@@ -48,6 +48,7 @@ class SchoolRepository(
   val academicCalendarEvents: Flow<List<AcademicCalendarEvent>> = dao.getAllAcademicCalendarEvents()
   val announcements: Flow<List<SchoolAnnouncement>> = dao.getAllAnnouncements()
   val schoolProfile: Flow<SchoolProfile?> = dao.getSchoolProfile()
+  val allSchoolProfiles: Flow<List<SchoolProfile>> = dao.getAllSchoolProfiles()
   val classrooms: Flow<List<ClassroomRoom>> = dao.getAllClassrooms()
   val teachers: Flow<List<TeacherAccount>> = dao.getAllTeachers()
   val parentStudentAccounts: Flow<List<ParentStudentAccount>> = dao.getAllParentStudentAccounts()
@@ -486,7 +487,68 @@ class SchoolRepository(
           assignmentLetterFileName = "SK_Penugasan_Kepala_Sekolah_2026.pdf",
           adminUsername = "admin",
           adminPassword = "admin",
-          isVerified = true
+          isVerified = true,
+          status = "VERIFIED",
+          registeredAt = "20 Agu 2026",
+          totalClassrooms = 3,
+          totalTeachers = 3,
+          totalStudents = 86
+        )
+      )
+      // Seed a pending school waiting for Superadmin approval
+      dao.insertOrUpdateSchoolProfile(
+        SchoolProfile(
+          schoolName = "SDIT Bintang Madani",
+          npsn = "20219483",
+          level = "Sekolah Dasar (SD / MI)",
+          accreditation = "B (Baik)",
+          address = "Jl. Riau No. 108, Citarum",
+          city = "Bandung, Jawa Barat",
+          phone = "022-4209182",
+          email = "tatausaha@bintangmadani.sch.id",
+          principalName = "Hj. Siti Rahmah, S.Pd.I",
+          applicantName = "Hj. Siti Rahmah, S.Pd.I",
+          applicantNik = "3273016405820002",
+          applicantPhone = "081398712345",
+          applicantRole = "Kepala Sekolah",
+          applicantAddress = "Jl. Dago Asri No. 14, Bandung",
+          assignmentLetterFileName = "SK_Yayasan_Pendidikan_Bintang_Madani_2026.pdf",
+          adminUsername = "bintangmadani",
+          adminPassword = "123",
+          isVerified = false,
+          status = "PENDING",
+          registeredAt = "28 Sep 2026",
+          totalClassrooms = 0,
+          totalTeachers = 0,
+          totalStudents = 0
+        )
+      )
+      // Seed a verified SMP school
+      dao.insertOrUpdateSchoolProfile(
+        SchoolProfile(
+          schoolName = "SMP Teladan Nusantara",
+          npsn = "20501923",
+          level = "Sekolah Menengah Pertama (SMP)",
+          accreditation = "A (Unggul)",
+          address = "Jl. Pemuda No. 22, Genteng",
+          city = "Surabaya, Jawa Timur",
+          phone = "031-5348910",
+          email = "info@teladannusantara.sch.id",
+          principalName = "Dr. Hendra Wijaya, M.M.",
+          applicantName = "Farid Ardiansyah, S.Kom",
+          applicantNik = "3578021509900003",
+          applicantPhone = "081230998877",
+          applicantRole = "Operator IT / Dapodik",
+          applicantAddress = "Jl. Darmo Permai No. 8, Surabaya",
+          assignmentLetterFileName = "SK_Dinas_Pendidikan_Surabaya_2026.pdf",
+          adminUsername = "teladan",
+          adminPassword = "123",
+          isVerified = true,
+          status = "VERIFIED",
+          registeredAt = "15 Agu 2026",
+          totalClassrooms = 6,
+          totalTeachers = 12,
+          totalStudents = 180
         )
       )
     }
@@ -561,9 +623,33 @@ class SchoolRepository(
       assignmentLetterFileName = assignmentLetterFileName,
       adminUsername = adminUsername,
       adminPassword = adminPassword,
-      isVerified = true
+      isVerified = false,
+      status = "PENDING",
+      registeredAt = "28 Sep 2026",
+      totalClassrooms = 0,
+      totalTeachers = 0,
+      totalStudents = 0
     )
     return dao.insertOrUpdateSchoolProfile(newProfile)
+  }
+
+  // Superadmin Operations
+  suspend fun approveSchoolRegistration(id: Long) {
+    dao.updateSchoolStatus(id = id, status = "VERIFIED", isVerified = true, reason = "")
+  }
+
+  suspend fun rejectSchoolRegistration(id: Long, reason: String) {
+    dao.updateSchoolStatus(id = id, status = "REJECTED", isVerified = false, reason = reason)
+  }
+
+  suspend fun toggleSchoolSuspension(id: Long, currentStatus: String) {
+    val newStatus = if (currentStatus == "SUSPENDED") "VERIFIED" else "SUSPENDED"
+    val isVerified = newStatus == "VERIFIED"
+    dao.updateSchoolStatus(id = id, status = newStatus, isVerified = isVerified, reason = "")
+  }
+
+  suspend fun deleteSchoolProfile(id: Long) {
+    dao.deleteSchoolProfile(id)
   }
 
   suspend fun addClassroom(name: String, gradeLevel: String, academicYear: String, teacherName: String, maxCap: Int): Long {

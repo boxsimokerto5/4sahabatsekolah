@@ -129,8 +129,17 @@ interface SchoolDao {
   @Query("SELECT * FROM school_profiles LIMIT 1")
   fun getSchoolProfile(): Flow<SchoolProfile?>
 
+  @Query("SELECT * FROM school_profiles ORDER BY id DESC")
+  fun getAllSchoolProfiles(): Flow<List<SchoolProfile>>
+
   @Insert(onConflict = OnConflictStrategy.REPLACE)
   suspend fun insertOrUpdateSchoolProfile(profile: SchoolProfile): Long
+
+  @Query("UPDATE school_profiles SET status = :status, isVerified = :isVerified, rejectionReason = :reason WHERE id = :id")
+  suspend fun updateSchoolStatus(id: Long, status: String, isVerified: Boolean, reason: String)
+
+  @Query("DELETE FROM school_profiles WHERE id = :id")
+  suspend fun deleteSchoolProfile(id: Long)
 
   // Classroom Rooms
   @Query("SELECT * FROM classroom_rooms ORDER BY name ASC")
