@@ -9,13 +9,17 @@ import com.example.data.model.AcademicCalendarEvent
 import com.example.data.model.AcademicReport
 import com.example.data.model.AttendanceRecord
 import com.example.data.model.ChatMessage
+import com.example.data.model.ClassroomRoom
 import com.example.data.model.DismissalAlert
 import com.example.data.model.ExamSchedule
+import com.example.data.model.ParentStudentAccount
 import com.example.data.model.PickupQueue
 import com.example.data.model.SavingTransaction
 import com.example.data.model.SchoolActivity
 import com.example.data.model.SchoolAnnouncement
+import com.example.data.model.SchoolProfile
 import com.example.data.model.Student
+import com.example.data.model.TeacherAccount
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -120,4 +124,44 @@ interface SchoolDao {
 
   @Query("DELETE FROM school_announcements WHERE id = :id")
   suspend fun deleteAnnouncement(id: Long)
+
+  // School Profile & Admin
+  @Query("SELECT * FROM school_profiles LIMIT 1")
+  fun getSchoolProfile(): Flow<SchoolProfile?>
+
+  @Insert(onConflict = OnConflictStrategy.REPLACE)
+  suspend fun insertOrUpdateSchoolProfile(profile: SchoolProfile): Long
+
+  // Classroom Rooms
+  @Query("SELECT * FROM classroom_rooms ORDER BY name ASC")
+  fun getAllClassrooms(): Flow<List<ClassroomRoom>>
+
+  @Insert(onConflict = OnConflictStrategy.REPLACE)
+  suspend fun insertClassroom(classroom: ClassroomRoom): Long
+
+  @Query("DELETE FROM classroom_rooms WHERE id = :id")
+  suspend fun deleteClassroom(id: Long)
+
+  // Teacher Accounts
+  @Query("SELECT * FROM teacher_accounts ORDER BY fullName ASC")
+  fun getAllTeachers(): Flow<List<TeacherAccount>>
+
+  @Insert(onConflict = OnConflictStrategy.REPLACE)
+  suspend fun insertTeacher(teacher: TeacherAccount): Long
+
+  @Query("UPDATE teacher_accounts SET assignedClass = :assignedClass WHERE id = :id")
+  suspend fun updateTeacherAssignedClass(id: Long, assignedClass: String)
+
+  @Query("DELETE FROM teacher_accounts WHERE id = :id")
+  suspend fun deleteTeacher(id: Long)
+
+  // Parent & Student Accounts
+  @Query("SELECT * FROM parent_student_accounts ORDER BY studentName ASC")
+  fun getAllParentStudentAccounts(): Flow<List<ParentStudentAccount>>
+
+  @Insert(onConflict = OnConflictStrategy.REPLACE)
+  suspend fun insertParentStudentAccount(account: ParentStudentAccount): Long
+
+  @Query("DELETE FROM parent_student_accounts WHERE id = :id")
+  suspend fun deleteParentStudentAccount(id: Long)
 }

@@ -23,6 +23,9 @@ import androidx.compose.material.icons.filled.Collections
 import androidx.compose.material.icons.filled.Grade
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.HowToReg
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -31,6 +34,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -47,6 +51,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.ui.AppScreen
 import com.example.ui.SchoolViewModel
+import com.example.ui.UserRole
 import com.example.ui.components.AppTopHeader
 import com.example.ui.components.SupabaseConfigDialog
 import com.example.ui.screens.AcademicScreen
@@ -57,7 +62,11 @@ import com.example.ui.screens.ChatScreen
 import com.example.ui.screens.ExamScreen
 import com.example.ui.screens.GalleryScreen
 import com.example.ui.screens.HomeScreen
+import com.example.ui.screens.LoginScreen
 import com.example.ui.screens.SavingsScreen
+import com.example.ui.screens.SchoolAdminScreen
+import com.example.ui.screens.SchoolRegistrationScreen
+import com.example.ui.screens.SplashScreen
 import com.example.ui.theme.MyApplicationTheme
 import com.example.ui.theme.PastelPeach
 import com.example.ui.theme.PastelPeachLight
@@ -91,11 +100,18 @@ fun SchoolParentApp(viewModel: SchoolViewModel = viewModel()) {
   val examSchedules by viewModel.examSchedules.collectAsStateWithLifecycle()
   val academicCalendarEvents by viewModel.academicCalendarEvents.collectAsStateWithLifecycle()
   val announcements by viewModel.announcements.collectAsStateWithLifecycle()
+  val schoolProfile by viewModel.schoolProfile.collectAsStateWithLifecycle()
+  val classrooms by viewModel.classrooms.collectAsStateWithLifecycle()
+  val teachers by viewModel.teachers.collectAsStateWithLifecycle()
+  val parentAccounts by viewModel.parentStudentAccounts.collectAsStateWithLifecycle()
+  val isLoggedIn by viewModel.isLoggedIn.collectAsStateWithLifecycle()
+  val loggedInAccount by viewModel.loggedInAccount.collectAsStateWithLifecycle()
   val snackbarEvent by viewModel.snackbarEvent.collectAsStateWithLifecycle()
   val isSupabaseConfigured by viewModel.isSupabaseConfigured.collectAsStateWithLifecycle()
   val isSyncing by viewModel.isSyncing.collectAsStateWithLifecycle()
 
   var showSupabaseDialog by remember { mutableStateOf(false) }
+  var showLogoutDialog by remember { mutableStateOf(false) }
 
   val snackbarHostState = remember { SnackbarHostState() }
 
@@ -106,7 +122,7 @@ fun SchoolParentApp(viewModel: SchoolViewModel = viewModel()) {
     }
   }
 
-  val showBottomNav = currentScreen in listOf(
+  val showBottomNav = isLoggedIn && currentRole != UserRole.ADMIN && currentScreen in listOf(
     AppScreen.HOME,
     AppScreen.ACADEMIC,
     AppScreen.SAVINGS,
@@ -211,14 +227,39 @@ fun SchoolParentApp(viewModel: SchoolViewModel = viewModel()) {
         .padding(innerPadding)
     ) {
       // Top header with role switcher (only shown on Home screen to keep sub-screens clean with TopAppBar)
-      if (currentScreen == AppScreen.HOME) {
+      if (isLoggedIn && currentScreen == AppScreen.HOME) {
         AppTopHeader(
           student = student,
           currentRole = currentRole,
           isSupabaseConfigured = isSupabaseConfigured,
           isSyncing = isSyncing,
           onSwitchRole = { viewModel.switchRole(it) },
-          onOpenSupabaseConfig = { showSupabaseDialog = true }
+          onOpenSupabaseConfig = { showSupabaseDialog = true },
+          onLogout = { showLogoutDialog = true }
+        )
+      }
+
+      if (showLogoutDialog) {
+        AlertDialog(
+          onDismissRequest = { showLogoutDialog = false },
+          title = { Text("Konfirmasi Keluar") },
+          text = { Text("Apakah Anda yakin ingin keluar dari akun ini dan kembali ke halaman login?") },
+          confirmButton = {
+            Button(
+              onClick = {
+                showLogoutDialog = false
+                viewModel.logout()
+              },
+              colors = ButtonDefaults.buttonColors(containerColor = PastelPeach)
+            ) {
+              Text("Ya, Keluar", color = Color.White)
+            }
+          },
+          dismissButton = {
+            TextButton(onClick = { showLogoutDialog = false }) {
+              Text("Batal")
+            }
+          }
         )
       }
 
@@ -243,6 +284,52 @@ fun SchoolParentApp(viewModel: SchoolViewModel = viewModel()) {
           label = "ScreenTransition"
         ) { screen ->
           when (screen) {
+            AppScreen.SPLASH -> SplashScreen(
+              onNavigateToLogin = { viewModel.navigateTo(AppScreen.LOGIN) }
+            )
+
+            AppScreen.LOGIN -> LoginScreen(
+              onLogin = { username, password -> viewModel.login(username, password) },
+              onQuickLoginTeacher = { viewModel.quickLoginAsTeacher() },
+              onQuickLoginParent = { viewModel.quickLoginAsParent() },
+              onQuickLoginAdmin = { viewModel.quickLoginAsAdmin() },
+              onNavigateToRegistration = { viewModel.navigateTo(AppScreen.SCHOOL_REGISTRATION) }
+            )
+
+            AppScreen.SCHOOL_REGISTRATION -> SchoolRegistrationScreen(
+              onRegisterSuccess = { schoolName, npsn, level, address, city, phone, email, principalName, applicantName, applicantNik, applicantPhone, applicantRole, applicantAddress, letterFileName, adminUsername, adminPassword ->
+                viewModel.registerSchool(
+                  schoolName, npsn, level, address, city, phone, email, principalName, applicantName, applicantNik, applicantPhone, applicantRole, applicantAddress, letterFileName, adminUsername, adminPassword
+                )
+              },
+              onNavigateToLogin = { viewModel.navigateTo(AppScreen.LOGIN) }
+            )
+
+            AppScreen.ADMIN_DASHBOARD -> SchoolAdminScreen(
+              profile = schoolProfile,
+              classrooms = classrooms,
+              teachers = teachers,
+              parentAccounts = parentAccounts,
+              onUpdateProfile = { viewModel.updateSchoolProfile(it) },
+              onAddClassroom = { name, gradeLevel, academicYear, teacherName, maxCap ->
+                viewModel.addClassroom(name, gradeLevel, academicYear, teacherName, maxCap)
+              },
+              onDeleteClassroom = { viewModel.deleteClassroom(it) },
+              onAddTeacher = { fullName, nip, phone, assignedClass, username, pass ->
+                viewModel.addTeacher(fullName, nip, phone, assignedClass, username, pass)
+              },
+              onUpdateTeacherAssignedClass = { id, assignedClass ->
+                viewModel.updateTeacherAssignedClass(id, assignedClass)
+              },
+              onDeleteTeacher = { viewModel.deleteTeacher(it) },
+              onAddParentStudent = { studentName, nisn, studentClass, parentName, parentPhone, username, pass ->
+                viewModel.addParentStudentAccount(studentName, nisn, studentClass, parentName, parentPhone, username, pass)
+              },
+              onDeleteParentStudent = { viewModel.deleteParentStudentAccount(it) },
+              onSwitchToRole = { viewModel.switchRole(it) },
+              onLogout = { viewModel.logout() }
+            )
+
             AppScreen.HOME -> HomeScreen(
               student = student,
               currentRole = currentRole,

@@ -8,13 +8,17 @@ import com.example.data.model.AcademicCalendarEvent
 import com.example.data.model.AcademicReport
 import com.example.data.model.AttendanceRecord
 import com.example.data.model.ChatMessage
+import com.example.data.model.ClassroomRoom
 import com.example.data.model.DismissalAlert
 import com.example.data.model.ExamSchedule
+import com.example.data.model.ParentStudentAccount
 import com.example.data.model.PickupQueue
 import com.example.data.model.SavingTransaction
 import com.example.data.model.SchoolActivity
 import com.example.data.model.SchoolAnnouncement
+import com.example.data.model.SchoolProfile
 import com.example.data.model.Student
+import com.example.data.model.TeacherAccount
 import com.example.data.remote.SupabaseClientManager
 import com.example.data.repository.SchoolRepository
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -30,11 +34,25 @@ import java.util.Locale
 
 enum class UserRole {
   PARENT, // Bunda / Wali Murid
-  TEACHER // Bu Guru / Wali Kelas
+  TEACHER, // Bu Guru / Wali Kelas
+  ADMIN // Kepala Sekolah / Tata Usaha
 }
 
+data class LoggedInAccount(
+  val username: String,
+  val fullName: String,
+  val role: UserRole,
+  val roleTitle: String,
+  val schoolName: String = "SD Ceria Bangsa",
+  val classOrNis: String
+)
+
 enum class AppScreen {
+  SPLASH,
+  LOGIN,
+  SCHOOL_REGISTRATION,
   HOME,
+  ADMIN_DASHBOARD,
   ACADEMIC,
   SAVINGS,
   ATTENDANCE,
@@ -50,10 +68,16 @@ class SchoolViewModel(application: Application) : AndroidViewModel(application) 
   val supabaseManager = SupabaseClientManager(application)
   private val repository: SchoolRepository
 
+  private val _isLoggedIn = MutableStateFlow(false)
+  val isLoggedIn: StateFlow<Boolean> = _isLoggedIn.asStateFlow()
+
+  private val _loggedInAccount = MutableStateFlow<LoggedInAccount?>(null)
+  val loggedInAccount: StateFlow<LoggedInAccount?> = _loggedInAccount.asStateFlow()
+
   private val _currentRole = MutableStateFlow(UserRole.PARENT)
   val currentRole: StateFlow<UserRole> = _currentRole.asStateFlow()
 
-  private val _currentScreen = MutableStateFlow(AppScreen.HOME)
+  private val _currentScreen = MutableStateFlow(AppScreen.SPLASH)
   val currentScreen: StateFlow<AppScreen> = _currentScreen.asStateFlow()
 
   private val _snackbarEvent = MutableStateFlow<String?>(null)
@@ -114,10 +138,159 @@ class SchoolViewModel(application: Application) : AndroidViewModel(application) 
   val announcements: StateFlow<List<SchoolAnnouncement>> = repository.announcements
     .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+  val schoolProfile: StateFlow<SchoolProfile?> = repository.schoolProfile
+    .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
+  val classrooms: StateFlow<List<ClassroomRoom>> = repository.classrooms
+    .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+  val teachers: StateFlow<List<TeacherAccount>> = repository.teachers
+    .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+  val parentStudentAccounts: StateFlow<List<ParentStudentAccount>> = repository.parentStudentAccounts
+    .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
   fun switchRole(role: UserRole) {
     _currentRole.value = role
-    val roleName = if (role == UserRole.PARENT) "Bunda Dina (Wali Murid)" else "Bu Guru Sarah (Wali Kelas)"
-    _snackbarEvent.value = "Beralih ke mode: $roleName"
+    val currentProf = schoolProfile.value
+    val schoolTitle = currentProf?.schoolName ?: "SD Ceria Bangsa"
+
+    when (role) {
+      UserRole.ADMIN -> {
+        _loggedInAccount.value = LoggedInAccount(
+          username = currentProf?.adminUsername ?: "admin",
+          fullName = currentProf?.principalName ?: "Drs. H. Mulyono, M.Pd",
+          role = UserRole.ADMIN,
+          roleTitle = "Kepala Sekolah & Admin",
+          schoolName = schoolTitle,
+          classOrNis = "NPSN: ${currentProf?.npsn ?: "20104829"}"
+        )
+        _currentScreen.value = AppScreen.ADMIN_DASHBOARD
+        _snackbarEvent.value = "Beralih ke mode: Admin Sekolah (${currentProf?.principalName ?: "Kepala Sekolah"})"
+      }
+      UserRole.TEACHER -> {
+        _loggedInAccount.value = LoggedInAccount(
+          username = "guru",
+          fullName = "Bu Sarah, S.Pd",
+          role = UserRole.TEACHER,
+          roleTitle = "Wali Kelas 2-B",
+          schoolName = schoolTitle,
+          classOrNis = "Kelas 2-B • 28 Siswa"
+        )
+        _currentScreen.value = AppScreen.HOME
+        _snackbarEvent.value = "Beralih ke mode: Bu Guru Sarah (Wali Kelas)"
+      }
+      UserRole.PARENT -> {
+        _loggedInAccount.value = LoggedInAccount(
+          username = "ortu",
+          fullName = "Bunda Dina",
+          role = UserRole.PARENT,
+          roleTitle = "Orang Tua Siswa",
+          schoolName = schoolTitle,
+          classOrNis = "Ananda: Rafa Al-Ghifari (2-B)"
+        )
+        _currentScreen.value = AppScreen.HOME
+        _snackbarEvent.value = "Beralih ke mode: Bunda Dina (Wali Murid)"
+      }
+    }
+  }
+
+  fun login(username: String, password: String): Boolean {
+    val trimmedUser = username.trim().lowercase()
+    val trimmedPass = password.trim()
+    val currentProf = schoolProfile.value
+    val schoolTitle = currentProf?.schoolName ?: "SD Ceria Bangsa"
+
+    // 1. Check Admin
+    val isAdminUser = trimmedUser == "admin" || trimmedUser == "mulyono" || (currentProf != null && trimmedUser == currentProf.adminUsername.lowercase())
+    val isAdminPass = trimmedPass == "admin" || trimmedPass == "123456" || (currentProf != null && trimmedPass == currentProf.adminPassword)
+
+    if (isAdminUser && isAdminPass) {
+      val account = LoggedInAccount(
+        username = currentProf?.adminUsername ?: "admin",
+        fullName = currentProf?.principalName ?: "Drs. H. Mulyono, M.Pd",
+        role = UserRole.ADMIN,
+        roleTitle = "Kepala Sekolah / Admin Lembaga",
+        schoolName = schoolTitle,
+        classOrNis = "NPSN: ${currentProf?.npsn ?: "20104829"}"
+      )
+      _currentRole.value = UserRole.ADMIN
+      _loggedInAccount.value = account
+      _isLoggedIn.value = true
+      _currentScreen.value = AppScreen.ADMIN_DASHBOARD
+      _snackbarEvent.value = "Selamat datang, ${account.fullName}! Dashboard Admin Sekolah aktif. 🏢"
+      return true
+    }
+
+    // 2. Check Teacher
+    val matchedTeacher = teachers.value.find { it.username.lowercase() == trimmedUser && it.password == trimmedPass }
+    val isDefaultTeacher = (trimmedUser == "guru" || trimmedUser == "sarah" || trimmedUser == "19850712") && (trimmedPass == "guru" || trimmedPass == "123456")
+
+    if (matchedTeacher != null || isDefaultTeacher) {
+      val tName = matchedTeacher?.fullName ?: "Bu Sarah, S.Pd"
+      val tClass = matchedTeacher?.assignedClass ?: "Kelas 2-B"
+      val account = LoggedInAccount(
+        username = matchedTeacher?.username ?: "guru",
+        fullName = tName,
+        role = UserRole.TEACHER,
+        roleTitle = "Wali $tClass",
+        schoolName = schoolTitle,
+        classOrNis = "$tClass • SD Ceria"
+      )
+      _currentRole.value = UserRole.TEACHER
+      _loggedInAccount.value = account
+      _isLoggedIn.value = true
+      _currentScreen.value = AppScreen.HOME
+      _snackbarEvent.value = "Selamat datang, $tName! Portal kelas siap digunakan. 🍎"
+      return true
+    }
+
+    // 3. Check Parent
+    val matchedParent = parentStudentAccounts.value.find {
+      (it.username.lowercase() == trimmedUser || it.nisn == trimmedUser) && it.password == trimmedPass
+    }
+    val isDefaultParent = (trimmedUser == "ortu" || trimmedUser == "bunda" || trimmedUser == "00928371") && (trimmedPass == "ortu" || trimmedPass == "123456")
+
+    if (matchedParent != null || isDefaultParent) {
+      val pName = matchedParent?.parentName ?: "Bunda Dina"
+      val sName = matchedParent?.studentName ?: "Rafa Al-Ghifari"
+      val sClass = matchedParent?.studentClass ?: "Kelas 2-B"
+      val account = LoggedInAccount(
+        username = matchedParent?.username ?: "ortu",
+        fullName = pName,
+        role = UserRole.PARENT,
+        roleTitle = "Orang Tua Siswa",
+        schoolName = schoolTitle,
+        classOrNis = "Ananda: $sName ($sClass)"
+      )
+      _currentRole.value = UserRole.PARENT
+      _loggedInAccount.value = account
+      _isLoggedIn.value = true
+      _currentScreen.value = AppScreen.HOME
+      _snackbarEvent.value = "Selamat datang, $pName! Pantauan Ananda $sName telah dimuat. 🌸"
+      return true
+    }
+
+    return false
+  }
+
+  fun quickLoginAsTeacher() {
+    login("guru", "guru")
+  }
+
+  fun quickLoginAsParent() {
+    login("ortu", "ortu")
+  }
+
+  fun quickLoginAsAdmin() {
+    login("admin", "admin")
+  }
+
+  fun logout() {
+    _isLoggedIn.value = false
+    _loggedInAccount.value = null
+    _currentScreen.value = AppScreen.LOGIN
+    _snackbarEvent.value = "Anda telah berhasil keluar dari akun."
   }
 
   fun navigateTo(screen: AppScreen) {
@@ -341,6 +514,134 @@ class SchoolViewModel(application: Application) : AndroidViewModel(application) 
     viewModelScope.launch {
       repository.deleteAnnouncement(id)
       _snackbarEvent.value = "Pengumuman berhasil dihapus dari mading."
+    }
+  }
+
+  // School Registration & Admin Management
+  fun registerSchool(
+    schoolName: String,
+    npsn: String,
+    level: String,
+    address: String,
+    city: String,
+    phone: String,
+    email: String,
+    principalName: String,
+    applicantName: String,
+    applicantNik: String,
+    applicantPhone: String,
+    applicantRole: String,
+    applicantAddress: String,
+    assignmentLetterFileName: String,
+    adminUsername: String,
+    adminPassword: String
+  ) {
+    viewModelScope.launch {
+      repository.registerNewSchool(
+        schoolName = schoolName,
+        npsn = npsn,
+        level = level,
+        address = address,
+        city = city,
+        phone = phone,
+        email = email,
+        principalName = principalName,
+        applicantName = applicantName,
+        applicantNik = applicantNik,
+        applicantPhone = applicantPhone,
+        applicantRole = applicantRole,
+        applicantAddress = applicantAddress,
+        assignmentLetterFileName = assignmentLetterFileName,
+        adminUsername = adminUsername,
+        adminPassword = adminPassword
+      )
+
+      // Auto login as newly registered school admin
+      val account = LoggedInAccount(
+        username = adminUsername,
+        fullName = applicantName,
+        role = UserRole.ADMIN,
+        roleTitle = applicantRole,
+        schoolName = schoolName,
+        classOrNis = "NPSN: $npsn"
+      )
+      _currentRole.value = UserRole.ADMIN
+      _loggedInAccount.value = account
+      _isLoggedIn.value = true
+      _currentScreen.value = AppScreen.ADMIN_DASHBOARD
+      _snackbarEvent.value = "Pendaftaran $schoolName berhasil! Akun Admin Anda telah aktif. 🎉"
+    }
+  }
+
+  fun updateSchoolProfile(profile: SchoolProfile) {
+    viewModelScope.launch {
+      repository.updateSchoolProfile(profile)
+      _snackbarEvent.value = "Data profil dan legalitas sekolah berhasil diperbarui!"
+    }
+  }
+
+  fun addClassroom(name: String, gradeLevel: String, academicYear: String, teacherName: String, maxCap: Int) {
+    viewModelScope.launch {
+      repository.addClassroom(name, gradeLevel, academicYear, teacherName, maxCap)
+      _snackbarEvent.value = "Ruang kelas '$name' berhasil ditambahkan!"
+    }
+  }
+
+  fun deleteClassroom(id: Long) {
+    viewModelScope.launch {
+      repository.deleteClassroom(id)
+      _snackbarEvent.value = "Ruang kelas berhasil dihapus."
+    }
+  }
+
+  fun addTeacher(fullName: String, nip: String, phone: String, assignedClass: String, username: String, pass: String) {
+    viewModelScope.launch {
+      repository.addTeacher(fullName, nip, phone, assignedClass, username, pass)
+      _snackbarEvent.value = "Akun guru '$fullName' berhasil dibuat untuk $assignedClass!"
+    }
+  }
+
+  fun updateTeacherAssignedClass(id: Long, assignedClass: String) {
+    viewModelScope.launch {
+      repository.updateTeacherAssignedClass(id, assignedClass)
+      _snackbarEvent.value = "Penugasan kelas guru berhasil diperbarui ke $assignedClass."
+    }
+  }
+
+  fun deleteTeacher(id: Long) {
+    viewModelScope.launch {
+      repository.deleteTeacher(id)
+      _snackbarEvent.value = "Akun guru berhasil dihapus."
+    }
+  }
+
+  fun addParentStudentAccount(
+    studentName: String,
+    nisn: String,
+    studentClass: String,
+    parentName: String,
+    parentPhone: String,
+    username: String,
+    pass: String
+  ) {
+    viewModelScope.launch {
+      repository.addParentStudentAccount(
+        studentName = studentName,
+        nisn = nisn,
+        studentClass = studentClass,
+        parentName = parentName,
+        parentPhone = parentPhone,
+        username = username,
+        pass = pass
+      )
+      _snackbarEvent.value = "Akun orang tua untuk siswa '$studentName' ($studentClass) berhasil dibuat!"
+    }
+  }
+
+  fun deleteParentStudentAccount(id: Long) {
+    viewModelScope.launch {
+      repository.deleteParentStudentAccount(id)
+      _snackbarEvent.value = "Akun orang tua/siswa berhasil dihapus."
     }
   }
 }

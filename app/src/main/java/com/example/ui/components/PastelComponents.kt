@@ -19,6 +19,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.Campaign
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.DirectionsCar
@@ -78,15 +79,18 @@ fun AppTopHeader(
   isSyncing: Boolean,
   onSwitchRole: (UserRole) -> Unit,
   onOpenSupabaseConfig: () -> Unit,
+  onLogout: (() -> Unit)? = null,
   modifier: Modifier = Modifier
 ) {
-  val roleGradient = if (currentRole == UserRole.PARENT) {
-    Brush.horizontalGradient(
+  val roleGradient = when (currentRole) {
+    UserRole.PARENT -> Brush.horizontalGradient(
       listOf(Color(0xFFFF9A8B), Color(0xFFFF6A88), Color(0xFFFF99AC))
     )
-  } else {
-    Brush.horizontalGradient(
+    UserRole.TEACHER -> Brush.horizontalGradient(
       listOf(Color(0xFF8E8CD8), Color(0xFF6B63B6), Color(0xFF9B8DF2))
+    )
+    UserRole.ADMIN -> Brush.horizontalGradient(
+      listOf(Color(0xFF38BDF8), Color(0xFF0284C7), Color(0xFF0369A1))
     )
   }
 
@@ -122,16 +126,20 @@ fun AppTopHeader(
 
           Column {
             Text(
-              text = if (currentRole == UserRole.PARENT) "SD Ceria Bangsa" else "Portal Wali Kelas 2-B",
+              text = when (currentRole) {
+                UserRole.PARENT -> "SD Ceria Bangsa"
+                UserRole.TEACHER -> "Portal Wali Kelas 2-B"
+                UserRole.ADMIN -> "Portal Administrator"
+              },
               fontSize = 11.sp,
               fontWeight = FontWeight.Medium,
               color = Color.White.copy(alpha = 0.9f)
             )
             Text(
-              text = if (currentRole == UserRole.PARENT) {
-                student?.name ?: "Rafa Al-Ghifari"
-              } else {
-                "Bu Sarah, S.Pd"
+              text = when (currentRole) {
+                UserRole.PARENT -> student?.name ?: "Rafa Al-Ghifari"
+                UserRole.TEACHER -> "Bu Sarah, S.Pd"
+                UserRole.ADMIN -> "Drs. H. Mulyono (Admin)"
               },
               fontSize = 17.sp,
               fontWeight = FontWeight.Bold,
@@ -176,7 +184,11 @@ fun AppTopHeader(
             color = Color.White.copy(alpha = 0.22f),
             modifier = Modifier
               .clickable {
-                val nextRole = if (currentRole == UserRole.PARENT) UserRole.TEACHER else UserRole.PARENT
+                val nextRole = when (currentRole) {
+                  UserRole.PARENT -> UserRole.TEACHER
+                  UserRole.TEACHER -> UserRole.ADMIN
+                  UserRole.ADMIN -> UserRole.PARENT
+                }
                 onSwitchRole(nextRole)
               }
               .border(1.dp, Color.White.copy(alpha = 0.4f), RoundedCornerShape(18.dp))
@@ -194,11 +206,46 @@ fun AppTopHeader(
               )
               Spacer(modifier = Modifier.width(3.dp))
               Text(
-                text = if (currentRole == UserRole.PARENT) "Bunda" else "Guru",
+                text = when (currentRole) {
+                  UserRole.PARENT -> "Bunda"
+                  UserRole.TEACHER -> "Guru"
+                  UserRole.ADMIN -> "Admin"
+                },
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Bold,
                 color = Color.White
               )
+            }
+          }
+
+          // Logout button
+          if (onLogout != null) {
+            Surface(
+              shape = RoundedCornerShape(18.dp),
+              color = Color.White.copy(alpha = 0.22f),
+              modifier = Modifier
+                .clickable(onClick = onLogout)
+                .border(1.dp, Color.White.copy(alpha = 0.4f), RoundedCornerShape(18.dp))
+                .testTag("header_logout_button")
+            ) {
+              Row(
+                modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically
+              ) {
+                Icon(
+                  imageVector = Icons.AutoMirrored.Filled.Logout,
+                  contentDescription = "Keluar / Logout",
+                  tint = Color.White,
+                  modifier = Modifier.size(15.dp)
+                )
+                Spacer(modifier = Modifier.width(3.dp))
+                Text(
+                  text = "Keluar",
+                  fontSize = 11.sp,
+                  fontWeight = FontWeight.Bold,
+                  color = Color.White
+                )
+              }
             }
           }
         }

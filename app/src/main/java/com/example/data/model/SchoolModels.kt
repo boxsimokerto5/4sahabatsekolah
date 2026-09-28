@@ -133,3 +133,60 @@ data class SchoolAnnouncement(
   val totalRecipients: Int = 28,
   val attachmentTitle: String = ""
 )
+
+@Entity(tableName = "school_profiles")
+data class SchoolProfile(
+  @PrimaryKey(autoGenerate = true) val id: Long = 0,
+  val schoolName: String,
+  val npsn: String = "20104829",
+  val level: String = "Sekolah Dasar (SD)",
+  val accreditation: String = "A (Unggul)",
+  val address: String,
+  val city: String = "Jakarta Pusat",
+  val phone: String = "021-3908271",
+  val email: String = "admin@ceriabangsa.sch.id",
+  val principalName: String = "Drs. H. Mulyono, M.Pd",
+  val applicantName: String = "Drs. H. Mulyono, M.Pd",
+  val applicantNik: String = "3171051203750001",
+  val applicantPhone: String = "081289001234",
+  val applicantRole: String = "Kepala Sekolah",
+  val applicantAddress: String = "Jl. Cikini Raya No. 45, Menteng",
+  val assignmentLetterFileName: String = "SK_Penugasan_Kepala_Sekolah_2026.pdf",
+  val adminUsername: String = "admin",
+  val adminPassword: String = "admin",
+  val isVerified: Boolean = true
+)
+
+@Entity(tableName = "classroom_rooms")
+data class ClassroomRoom(
+  @PrimaryKey(autoGenerate = true) val id: Long = 0,
+  val name: String, // e.g. "Kelas 2-B"
+  val gradeLevel: String = "Kelas 2",
+  val academicYear: String = "2026/2027",
+  val homeroomTeacherName: String = "Bu Sarah, S.Pd",
+  val studentCount: Int = 28,
+  val maxCapacity: Int = 30
+)
+
+@Entity(tableName = "teacher_accounts")
+data class TeacherAccount(
+  @PrimaryKey(autoGenerate = true) val id: Long = 0,
+  val fullName: String,
+  val nip: String,
+  val phone: String,
+  val assignedClass: String, // e.g. "Kelas 2-B"
+  val username: String,
+  val password: String = "guru"
+)
+
+@Entity(tableName = "parent_student_accounts")
+data class ParentStudentAccount(
+  @PrimaryKey(autoGenerate = true) val id: Long = 0,
+  val studentName: String,
+  val nisn: String,
+  val studentClass: String, // e.g. "Kelas 2-B"
+  val parentName: String,
+  val parentPhone: String,
+  val username: String,
+  val password: String = "ortu"
+)

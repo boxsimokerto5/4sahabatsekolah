@@ -6,13 +6,17 @@ import com.example.data.model.AcademicCalendarEvent
 import com.example.data.model.AcademicReport
 import com.example.data.model.AttendanceRecord
 import com.example.data.model.ChatMessage
+import com.example.data.model.ClassroomRoom
 import com.example.data.model.DismissalAlert
 import com.example.data.model.ExamSchedule
+import com.example.data.model.ParentStudentAccount
 import com.example.data.model.PickupQueue
 import com.example.data.model.SavingTransaction
 import com.example.data.model.SchoolActivity
 import com.example.data.model.SchoolAnnouncement
+import com.example.data.model.SchoolProfile
 import com.example.data.model.Student
+import com.example.data.model.TeacherAccount
 import com.example.data.remote.SupabaseAcademicReport
 import com.example.data.remote.SupabaseAttendanceRecord
 import com.example.data.remote.SupabaseChatMessage
@@ -43,6 +47,10 @@ class SchoolRepository(
   val examSchedules: Flow<List<ExamSchedule>> = dao.getAllExamSchedules()
   val academicCalendarEvents: Flow<List<AcademicCalendarEvent>> = dao.getAllAcademicCalendarEvents()
   val announcements: Flow<List<SchoolAnnouncement>> = dao.getAllAnnouncements()
+  val schoolProfile: Flow<SchoolProfile?> = dao.getSchoolProfile()
+  val classrooms: Flow<List<ClassroomRoom>> = dao.getAllClassrooms()
+  val teachers: Flow<List<TeacherAccount>> = dao.getAllTeachers()
+  val parentStudentAccounts: Flow<List<ParentStudentAccount>> = dao.getAllParentStudentAccounts()
 
   suspend fun initializeDefaultDataIfEmpty() {
     val existingStudent = dao.getMainStudent().firstOrNull()
@@ -456,10 +464,167 @@ class SchoolRepository(
       )
     }
 
+    // Seed School Profile if empty
+    val existingProfile = dao.getSchoolProfile().firstOrNull()
+    if (existingProfile == null) {
+      dao.insertOrUpdateSchoolProfile(
+        SchoolProfile(
+          schoolName = "SD Ceria Bangsa",
+          npsn = "20104829",
+          level = "Sekolah Dasar (SD)",
+          accreditation = "A (Unggul)",
+          address = "Jl. Cikini Raya No. 45, Menteng",
+          city = "Jakarta Pusat, DKI Jakarta",
+          phone = "021-3908271",
+          email = "admin@ceriabangsa.sch.id",
+          principalName = "Drs. H. Mulyono, M.Pd",
+          applicantName = "Drs. H. Mulyono, M.Pd",
+          applicantNik = "3171051203750001",
+          applicantPhone = "081289001234",
+          applicantRole = "Kepala Sekolah",
+          applicantAddress = "Jl. Diponegoro No. 12, Menteng",
+          assignmentLetterFileName = "SK_Penugasan_Kepala_Sekolah_2026.pdf",
+          adminUsername = "admin",
+          adminPassword = "admin",
+          isVerified = true
+        )
+      )
+    }
+
+    // Seed Classrooms if empty
+    val existingClassrooms = dao.getAllClassrooms().firstOrNull()
+    if (existingClassrooms.isNullOrEmpty()) {
+      dao.insertClassroom(ClassroomRoom(name = "Kelas 1-A", gradeLevel = "Kelas 1", academicYear = "2026/2027", homeroomTeacherName = "Bu Ratna, S.Pd", studentCount = 28, maxCapacity = 30))
+      dao.insertClassroom(ClassroomRoom(name = "Kelas 2-B", gradeLevel = "Kelas 2", academicYear = "2026/2027", homeroomTeacherName = "Bu Sarah, S.Pd", studentCount = 28, maxCapacity = 30))
+      dao.insertClassroom(ClassroomRoom(name = "Kelas 3-A", gradeLevel = "Kelas 3", academicYear = "2026/2027", homeroomTeacherName = "Pak Bambang, S.Pd", studentCount = 30, maxCapacity = 32))
+    }
+
+    // Seed Teachers if empty
+    val existingTeachers = dao.getAllTeachers().firstOrNull()
+    if (existingTeachers.isNullOrEmpty()) {
+      dao.insertTeacher(TeacherAccount(fullName = "Bu Sarah, S.Pd", nip = "19850712 201001 2 003", phone = "081234567890", assignedClass = "Kelas 2-B", username = "guru", password = "guru"))
+      dao.insertTeacher(TeacherAccount(fullName = "Bu Ratna, S.Pd", nip = "19880315 201402 2 001", phone = "081345678901", assignedClass = "Kelas 1-A", username = "ratna", password = "123"))
+      dao.insertTeacher(TeacherAccount(fullName = "Pak Bambang, S.Pd", nip = "19821105 200801 1 004", phone = "081567890123", assignedClass = "Kelas 3-A", username = "bambang", password = "123"))
+    }
+
+    // Seed Parent-Student accounts if empty
+    val existingParentAccounts = dao.getAllParentStudentAccounts().firstOrNull()
+    if (existingParentAccounts.isNullOrEmpty()) {
+      dao.insertParentStudentAccount(ParentStudentAccount(studentName = "Rafa Al-Ghifari", nisn = "00928371", studentClass = "Kelas 2-B", parentName = "Bunda Dina & Ayah Farhan", parentPhone = "081298765432", username = "ortu", password = "ortu"))
+      dao.insertParentStudentAccount(ParentStudentAccount(studentName = "Alisha Zahra", nisn = "00928372", studentClass = "Kelas 2-B", parentName = "Ibu Nita", parentPhone = "081298765433", username = "nita", password = "123"))
+      dao.insertParentStudentAccount(ParentStudentAccount(studentName = "Kenzo Arkan", nisn = "00928373", studentClass = "Kelas 2-B", parentName = "Ayah Dimas", parentPhone = "081298765434", username = "dimas", password = "123"))
+    }
+
     // Attempt cloud sync if configured
     if (supabaseManager.isConfigured) {
       syncWithSupabase()
     }
+  }
+
+  // Admin & School Management Operations
+  suspend fun updateSchoolProfile(profile: SchoolProfile) {
+    dao.insertOrUpdateSchoolProfile(profile)
+  }
+
+  suspend fun registerNewSchool(
+    schoolName: String,
+    npsn: String,
+    level: String,
+    address: String,
+    city: String,
+    phone: String,
+    email: String,
+    principalName: String,
+    applicantName: String,
+    applicantNik: String,
+    applicantPhone: String,
+    applicantRole: String,
+    applicantAddress: String,
+    assignmentLetterFileName: String,
+    adminUsername: String,
+    adminPassword: String
+  ): Long {
+    val newProfile = SchoolProfile(
+      schoolName = schoolName,
+      npsn = if (npsn.isBlank()) "20104829" else npsn,
+      level = level,
+      address = address,
+      city = city,
+      phone = phone,
+      email = email,
+      principalName = principalName,
+      applicantName = applicantName,
+      applicantNik = applicantNik,
+      applicantPhone = applicantPhone,
+      applicantRole = applicantRole,
+      applicantAddress = applicantAddress,
+      assignmentLetterFileName = assignmentLetterFileName,
+      adminUsername = adminUsername,
+      adminPassword = adminPassword,
+      isVerified = true
+    )
+    return dao.insertOrUpdateSchoolProfile(newProfile)
+  }
+
+  suspend fun addClassroom(name: String, gradeLevel: String, academicYear: String, teacherName: String, maxCap: Int): Long {
+    val classroom = ClassroomRoom(
+      name = name,
+      gradeLevel = gradeLevel,
+      academicYear = academicYear,
+      homeroomTeacherName = teacherName,
+      studentCount = 0,
+      maxCapacity = maxCap
+    )
+    return dao.insertClassroom(classroom)
+  }
+
+  suspend fun deleteClassroom(id: Long) {
+    dao.deleteClassroom(id)
+  }
+
+  suspend fun addTeacher(fullName: String, nip: String, phone: String, assignedClass: String, username: String, pass: String): Long {
+    val teacher = TeacherAccount(
+      fullName = fullName,
+      nip = nip,
+      phone = phone,
+      assignedClass = assignedClass,
+      username = username,
+      password = pass
+    )
+    return dao.insertTeacher(teacher)
+  }
+
+  suspend fun updateTeacherAssignedClass(id: Long, assignedClass: String) {
+    dao.updateTeacherAssignedClass(id, assignedClass)
+  }
+
+  suspend fun deleteTeacher(id: Long) {
+    dao.deleteTeacher(id)
+  }
+
+  suspend fun addParentStudentAccount(
+    studentName: String,
+    nisn: String,
+    studentClass: String,
+    parentName: String,
+    parentPhone: String,
+    username: String,
+    pass: String
+  ): Long {
+    val account = ParentStudentAccount(
+      studentName = studentName,
+      nisn = nisn,
+      studentClass = studentClass,
+      parentName = parentName,
+      parentPhone = parentPhone,
+      username = username,
+      password = pass
+    )
+    return dao.insertParentStudentAccount(account)
+  }
+
+  suspend fun deleteParentStudentAccount(id: Long) {
+    dao.deleteParentStudentAccount(id)
   }
 
   // Announcement Actions
