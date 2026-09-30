@@ -10,6 +10,7 @@ import com.example.data.model.AcademicReport
 import com.example.data.model.AttendanceRecord
 import com.example.data.model.ChatMessage
 import com.example.data.model.ClassroomRoom
+import com.example.data.model.DailyUniform
 import com.example.data.model.DismissalAlert
 import com.example.data.model.ExamSchedule
 import com.example.data.model.ParentStudentAccount
@@ -20,6 +21,7 @@ import com.example.data.model.SchoolAnnouncement
 import com.example.data.model.SchoolProfile
 import com.example.data.model.Student
 import com.example.data.model.TeacherAccount
+import com.example.data.model.TimetableLesson
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -173,4 +175,33 @@ interface SchoolDao {
 
   @Query("DELETE FROM parent_student_accounts WHERE id = :id")
   suspend fun deleteParentStudentAccount(id: Long)
+
+  // Timetable Lessons (Jadwal Pelajaran)
+  @Query("SELECT * FROM timetable_lessons ORDER BY periodNumber ASC")
+  fun getAllTimetableLessons(): Flow<List<TimetableLesson>>
+
+  @Query("SELECT * FROM timetable_lessons WHERE dayOfWeek = :day ORDER BY periodNumber ASC")
+  fun getTimetableLessonsByDay(day: String): Flow<List<TimetableLesson>>
+
+  @Insert(onConflict = OnConflictStrategy.REPLACE)
+  suspend fun insertTimetableLesson(lesson: TimetableLesson): Long
+
+  @Query("UPDATE timetable_lessons SET isCompletedByParent = :isCompleted WHERE id = :id")
+  suspend fun updateLessonPackStatus(id: Long, isCompleted: Boolean)
+
+  @Query("DELETE FROM timetable_lessons WHERE id = :id")
+  suspend fun deleteTimetableLesson(id: Long)
+
+  // Daily Uniforms (Kode Seragam Harian)
+  @Query("SELECT * FROM daily_uniforms ORDER BY id ASC")
+  fun getAllDailyUniforms(): Flow<List<DailyUniform>>
+
+  @Query("SELECT * FROM daily_uniforms WHERE dayOfWeek = :day LIMIT 1")
+  fun getDailyUniformByDay(day: String): Flow<DailyUniform?>
+
+  @Insert(onConflict = OnConflictStrategy.REPLACE)
+  suspend fun insertDailyUniform(uniform: DailyUniform): Long
+
+  @Query("UPDATE daily_uniforms SET uniformTitle = :title, description = :description, accessories = :accessories, shoesColor = :shoes WHERE id = :id")
+  suspend fun updateDailyUniform(id: Long, title: String, description: String, accessories: String, shoes: String)
 }

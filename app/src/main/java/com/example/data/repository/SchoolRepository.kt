@@ -7,6 +7,7 @@ import com.example.data.model.AcademicReport
 import com.example.data.model.AttendanceRecord
 import com.example.data.model.ChatMessage
 import com.example.data.model.ClassroomRoom
+import com.example.data.model.DailyUniform
 import com.example.data.model.DismissalAlert
 import com.example.data.model.ExamSchedule
 import com.example.data.model.ParentStudentAccount
@@ -17,6 +18,7 @@ import com.example.data.model.SchoolAnnouncement
 import com.example.data.model.SchoolProfile
 import com.example.data.model.Student
 import com.example.data.model.TeacherAccount
+import com.example.data.model.TimetableLesson
 import com.example.data.remote.SupabaseAcademicReport
 import com.example.data.remote.SupabaseAttendanceRecord
 import com.example.data.remote.SupabaseChatMessage
@@ -52,6 +54,8 @@ class SchoolRepository(
   val classrooms: Flow<List<ClassroomRoom>> = dao.getAllClassrooms()
   val teachers: Flow<List<TeacherAccount>> = dao.getAllTeachers()
   val parentStudentAccounts: Flow<List<ParentStudentAccount>> = dao.getAllParentStudentAccounts()
+  val timetableLessons: Flow<List<TimetableLesson>> = dao.getAllTimetableLessons()
+  val dailyUniforms: Flow<List<DailyUniform>> = dao.getAllDailyUniforms()
 
   suspend fun initializeDefaultDataIfEmpty() {
     val existingStudent = dao.getMainStudent().firstOrNull()
@@ -575,6 +579,105 @@ class SchoolRepository(
       dao.insertParentStudentAccount(ParentStudentAccount(studentName = "Rafa Al-Ghifari", nisn = "00928371", studentClass = "Kelas 2-B", parentName = "Bunda Dina & Ayah Farhan", parentPhone = "081298765432", username = "ortu", password = "ortu"))
       dao.insertParentStudentAccount(ParentStudentAccount(studentName = "Alisha Zahra", nisn = "00928372", studentClass = "Kelas 2-B", parentName = "Ibu Nita", parentPhone = "081298765433", username = "nita", password = "123"))
       dao.insertParentStudentAccount(ParentStudentAccount(studentName = "Kenzo Arkan", nisn = "00928373", studentClass = "Kelas 2-B", parentName = "Ayah Dimas", parentPhone = "081298765434", username = "dimas", password = "123"))
+    }
+
+    // Seed Daily Uniforms if empty
+    val existingUniforms = dao.getAllDailyUniforms().firstOrNull()
+    if (existingUniforms.isNullOrEmpty()) {
+      dao.insertDailyUniform(
+        DailyUniform(
+          dayOfWeek = "Senin",
+          uniformTitle = "Seragam Merah Putih Nasional",
+          description = "Kemeja putih pendek, celana/rok merah hati, dasi merah sekolah, kaos kaki putih polos, sabuk hitam sekolah berlogo.",
+          accessories = "Topi Upacara Merah-Putih, Dasi Merah, Sabuk Sekolah Berlogo",
+          shoesColor = "Sepatu Hitam Polos & Kaos Kaki Putih",
+          badgeCategory = "Seragam Nasional (Upacara Bendera)",
+          previewColorHex = "#DC2626"
+        )
+      )
+      dao.insertDailyUniform(
+        DailyUniform(
+          dayOfWeek = "Selasa",
+          uniformTitle = "Kemeja Kotak-Kotak Khas SD Ceria Bangsa",
+          description = "Kemeja motif kotak-kotak oranye khas sekolah, celana/rok putih rapi, badge nama dada terpasang rapi.",
+          accessories = "Badge Lokasi & Nama Dada Siswa, Sabuk Sekolah",
+          shoesColor = "Sepatu Hitam / Dominan Gelap",
+          badgeCategory = "Seragam Khusus Identitas Sekolah",
+          previewColorHex = "#EA580C"
+        )
+      )
+      dao.insertDailyUniform(
+        DailyUniform(
+          dayOfWeek = "Rabu",
+          uniformTitle = "Batik Ceria Nusantara",
+          description = "Kemeja batik bernuansa biru langit motif nusantara ceria, celana/rok putih, rompi biru muda.",
+          accessories = "Ikat Pinggang Sekolah, Papan Nama Dada",
+          shoesColor = "Sepatu Hitam Polos",
+          badgeCategory = "Seragam Batik Budaya Sekolah",
+          previewColorHex = "#0284C7"
+        )
+      )
+      dao.insertDailyUniform(
+        DailyUniform(
+          dayOfWeek = "Kamis",
+          uniformTitle = "Kaos Olahraga Ceria (PJOK)",
+          description = "Kaos olahraga ceria kombinasi kuning-hijau tosca sekolah dan celana training panjang elastis.",
+          accessories = "Handuk Kecil UKS, Botol Minum Tumbler Pribadi, Topi Pelindung Panas",
+          shoesColor = "Sepatu Olahraga / Kets Nyaman Bertali atau Velcro",
+          badgeCategory = "Seragam Olahraga & Kebugaran",
+          previewColorHex = "#10B981"
+        )
+      )
+      dao.insertDailyUniform(
+        DailyUniform(
+          dayOfWeek = "Jumat",
+          uniformTitle = "Pramuka Siaga Lengkap",
+          description = "Kemeja pramuka siaga cokelat muda, celana/rok cokelat tua, kacu/hasduk merah putih lengkap ring/kolong.",
+          accessories = "Kacu Merah-Putih & Ring Kolong Siaga, Topi Baret / Bonet Cokelat, Tanda Barung",
+          shoesColor = "Sepatu Hitam Polos & Kaos Kaki Hitam",
+          badgeCategory = "Pramuka Siaga & Karakter Mandiri",
+          previewColorHex = "#92400E"
+        )
+      )
+    }
+
+    // Seed Timetable Lessons if empty
+    val existingLessons = dao.getAllTimetableLessons().firstOrNull()
+    if (existingLessons.isNullOrEmpty()) {
+      // Senin
+      dao.insertTimetableLesson(TimetableLesson(dayOfWeek = "Senin", periodNumber = 1, timeRange = "07.00 - 07.45 WIB", subject = "Upacara Bendera Merah Putih", teacherName = "Wali Kelas & Dewan Guru", roomName = "Lapangan Upacara Utama", requiredItems = "Topi & Dasi Wajib Terpasang Rapi", colorHex = "#EF4444"))
+      dao.insertTimetableLesson(TimetableLesson(dayOfWeek = "Senin", periodNumber = 2, timeRange = "07.45 - 09.00 WIB", subject = "Pendidikan Pancasila & Kewarganegaraan", teacherName = "Bu Sarah, S.Pd", roomName = "Kelas 2-B", requiredItems = "Buku Paket PPKn 2A, Buku Tulis, Tempat Pensil", colorHex = "#3B82F6"))
+      dao.insertTimetableLesson(TimetableLesson(dayOfWeek = "Senin", periodNumber = 3, timeRange = "09.00 - 09.30 WIB", subject = "Istirahat Sehat & Snack Time", teacherName = "Guru Piket", roomName = "Kantin Sehat / Selasar", requiredItems = "Bekal Buah / Snack Sehat & Air Minum", colorHex = "#10B981"))
+      dao.insertTimetableLesson(TimetableLesson(dayOfWeek = "Senin", periodNumber = 4, timeRange = "09.30 - 10.45 WIB", subject = "Bahasa Indonesia: Membaca Lancar", teacherName = "Bu Sarah, S.Pd", roomName = "Kelas 2-B", requiredItems = "Buku Tulis Garis Tiga, Buku Cerita Bergambar", colorHex = "#8B5CF6"))
+      dao.insertTimetableLesson(TimetableLesson(dayOfWeek = "Senin", periodNumber = 5, timeRange = "10.45 - 11.45 WIB", subject = "Seni Budaya & Prakarya (SBdP)", teacherName = "Bu Endah, S.Pd", roomName = "Studio Kreatif / Kelas 2-B", requiredItems = "Buku Gambar A4, Krayon 24 Warna, Penggaris", colorHex = "#EC4899"))
+
+      // Selasa
+      dao.insertTimetableLesson(TimetableLesson(dayOfWeek = "Selasa", periodNumber = 1, timeRange = "07.15 - 08.30 WIB", subject = "Matematika Ceria: Operasi Hitung", teacherName = "Pak Bambang, M.Pd", roomName = "Kelas 2-B", requiredItems = "Buku Matematika Jilid 2A, Penggaris 30cm, Pensil 2B", colorHex = "#F59E0B"))
+      dao.insertTimetableLesson(TimetableLesson(dayOfWeek = "Selasa", periodNumber = 2, timeRange = "08.30 - 09.30 WIB", subject = "Tematik Terpadu: Hidup Rukun", teacherName = "Bu Sarah, S.Pd", roomName = "Kelas 2-B", requiredItems = "Buku Tematik 2B, Catatan Harian Siswa", colorHex = "#3B82F6"))
+      dao.insertTimetableLesson(TimetableLesson(dayOfWeek = "Selasa", periodNumber = 3, timeRange = "09.30 - 10.00 WIB", subject = "Istirahat & Bermain Bersama", teacherName = "Guru Piket", roomName = "Halaman Bermain Hijau", requiredItems = "Bekal Roti Sehat & Air Mineral", colorHex = "#10B981"))
+      dao.insertTimetableLesson(TimetableLesson(dayOfWeek = "Selasa", periodNumber = 4, timeRange = "10.00 - 11.15 WIB", subject = "Bahasa Inggris Cilik: Daily Greetings", teacherName = "Ms. Amanda, B.A", roomName = "Lab Bahasa Ceria", requiredItems = "Buku My Next Words Grade 2, Kartu Kosakata", colorHex = "#06B6D4"))
+      dao.insertTimetableLesson(TimetableLesson(dayOfWeek = "Selasa", periodNumber = 5, timeRange = "11.15 - 11.45 WIB", subject = "Literasi & Pojok Baca Ceria", teacherName = "Bu Sarah, S.Pd", roomName = "Pojok Baca Kelas 2-B", requiredItems = "Buku Cerita Fabel Pilihan", colorHex = "#6366F1"))
+
+      // Rabu
+      dao.insertTimetableLesson(TimetableLesson(dayOfWeek = "Rabu", periodNumber = 1, timeRange = "07.15 - 08.30 WIB", subject = "Pendidikan Agama & Budi Pekerti", teacherName = "Ustadz Fauzi, S.Ag", roomName = "Musholla Al-Ikhlas", requiredItems = "Buku PAI, Iqro / Juz Amma, Sajadah Lipat", colorHex = "#10B981"))
+      dao.insertTimetableLesson(TimetableLesson(dayOfWeek = "Rabu", periodNumber = 2, timeRange = "08.30 - 09.30 WIB", subject = "Tematik: Menyayangi Hewan & Tumbuhan", teacherName = "Bu Sarah, S.Pd", roomName = "Kelas 2-B", requiredItems = "Buku Tematik 2C, Contoh Daun Kering", colorHex = "#14B8A6"))
+      dao.insertTimetableLesson(TimetableLesson(dayOfWeek = "Rabu", periodNumber = 3, timeRange = "09.30 - 10.00 WIB", subject = "Istirahat & Snack Time", teacherName = "Guru Piket", roomName = "Selasar Kelas 2-B", requiredItems = "Bekal Buah Segar & Susu", colorHex = "#F97316"))
+      dao.insertTimetableLesson(TimetableLesson(dayOfWeek = "Rabu", periodNumber = 4, timeRange = "10.00 - 11.15 WIB", subject = "Pendidikan Lingkungan Hidup (PLH)", teacherName = "Bu Sarah, S.Pd", roomName = "Taman Hidroponik Sekolah", requiredItems = "Sapu Tangan / Celemek Kebun Kecil", colorHex = "#84CC16"))
+      dao.insertTimetableLesson(TimetableLesson(dayOfWeek = "Rabu", periodNumber = 5, timeRange = "11.15 - 12.00 WIB", subject = "Bimbingan Karakter & Sholat Dhuhur", teacherName = "Ustadz Fauzi & Bu Sarah", roomName = "Musholla Al-Ikhlas", requiredItems = "Peralatan Sholat Pribadi (Peci/Mukena)", colorHex = "#059669"))
+
+      // Kamis
+      dao.insertTimetableLesson(TimetableLesson(dayOfWeek = "Kamis", periodNumber = 1, timeRange = "07.00 - 08.30 WIB", subject = "PJOK: Gerak Dasar & Permainan Bola", teacherName = "Pak Dedi, S.Or", roomName = "Lapangan Olahraga", requiredItems = "Baju Olahraga Sekolah, Sepatu Kets, Handuk", colorHex = "#F97316"))
+      dao.insertTimetableLesson(TimetableLesson(dayOfWeek = "Kamis", periodNumber = 2, timeRange = "08.30 - 09.00 WIB", subject = "Pendinginan, Cuci Tangan & Ganti Baju", teacherName = "Pak Dedi & Bu Sarah", roomName = "Ruang Ganti Siswa", requiredItems = "Baju Kemeja Ganti Bersih, Minyak Kayu Putih", colorHex = "#06B6D4"))
+      dao.insertTimetableLesson(TimetableLesson(dayOfWeek = "Kamis", periodNumber = 3, timeRange = "09.00 - 09.30 WIB", subject = "Istirahat & Sarapan Bersama", teacherName = "Guru Piket", roomName = "Kantin Sehat Sekolah", requiredItems = "Bekal Nasi Sehat & Air Mineral", colorHex = "#10B981"))
+      dao.insertTimetableLesson(TimetableLesson(dayOfWeek = "Kamis", periodNumber = 4, timeRange = "09.30 - 10.45 WIB", subject = "Matematika: Satuan Waktu & Jam", teacherName = "Pak Bambang, M.Pd", roomName = "Kelas 2-B", requiredItems = "Model Jam Kertas Buatan Sendiri, Buku Tulis", colorHex = "#F59E0B"))
+      dao.insertTimetableLesson(TimetableLesson(dayOfWeek = "Kamis", periodNumber = 5, timeRange = "10.45 - 11.45 WIB", subject = "Bahasa Daerah / Cerita Rakyat", teacherName = "Bu Ningsih, S.Pd", roomName = "Kelas 2-B", requiredItems = "Buku Paket Bahasa Daerah Nusantara", colorHex = "#8B5CF6"))
+
+      // Jumat
+      dao.insertTimetableLesson(TimetableLesson(dayOfWeek = "Jumat", periodNumber = 1, timeRange = "07.00 - 07.45 WIB", subject = "Senam Irama & Operasi Semut Bersih", teacherName = "Seluruh Guru & Pembina", roomName = "Lapangan Sekolah Ceria", requiredItems = "Seragam Pramuka / Kaos Olahraga Ceria", colorHex = "#EC4899"))
+      dao.insertTimetableLesson(TimetableLesson(dayOfWeek = "Jumat", periodNumber = 2, timeRange = "07.45 - 09.00 WIB", subject = "Tematik: Pengalaman Menyenangkan", teacherName = "Bu Sarah, S.Pd", roomName = "Kelas 2-B", requiredItems = "Buku Tematik 2D, Lem Kertas, Foto Kenangan", colorHex = "#3B82F6"))
+      dao.insertTimetableLesson(TimetableLesson(dayOfWeek = "Jumat", periodNumber = 3, timeRange = "09.00 - 09.30 WIB", subject = "Istirahat & Jumat Berkah Berbagi", teacherName = "Guru Piket", roomName = "Taman Sekolah", requiredItems = "Snack Sehat untuk Dinikmati Bersama", colorHex = "#10B981"))
+      dao.insertTimetableLesson(TimetableLesson(dayOfWeek = "Jumat", periodNumber = 4, timeRange = "09.30 - 10.45 WIB", subject = "Kepramukaan Siaga: Latihan Baris & Sandi", teacherName = "Kak Rangga & Bu Sarah", roomName = "Selasar Utama Sekolah", requiredItems = "Buku SKU Siaga, Peluit Bertali, Kacu Rapi", colorHex = "#92400E"))
+      dao.insertTimetableLesson(TimetableLesson(dayOfWeek = "Jumat", periodNumber = 5, timeRange = "10.45 - 11.00 WIB", subject = "Refleksi Pekanan & Pulang Ceria", teacherName = "Bu Sarah, S.Pd", roomName = "Kelas 2-B", requiredItems = "Semua Buku dan Alat Tulis Masuk Tas", colorHex = "#6366F1"))
     }
 
     // Attempt cloud sync if configured
@@ -1131,5 +1234,48 @@ class SchoolRepository(
     } catch (e: Exception) {
       Result.failure(Exception("Sinkronisasi cloud gagal: ${e.localizedMessage}"))
     }
+  }
+
+  // Timetable Operations
+  suspend fun insertTimetableLesson(
+    dayOfWeek: String,
+    periodNumber: Int,
+    timeRange: String,
+    subject: String,
+    teacherName: String,
+    roomName: String,
+    requiredItems: String,
+    colorHex: String
+  ) {
+    val lesson = TimetableLesson(
+      dayOfWeek = dayOfWeek,
+      periodNumber = periodNumber,
+      timeRange = timeRange,
+      subject = subject,
+      teacherName = teacherName,
+      roomName = roomName,
+      requiredItems = requiredItems,
+      colorHex = colorHex
+    )
+    dao.insertTimetableLesson(lesson)
+  }
+
+  suspend fun toggleLessonPackStatus(id: Long, isCompleted: Boolean) {
+    dao.updateLessonPackStatus(id, isCompleted)
+  }
+
+  suspend fun deleteTimetableLesson(id: Long) {
+    dao.deleteTimetableLesson(id)
+  }
+
+  // Daily Uniform Operations
+  suspend fun updateDailyUniform(
+    id: Long,
+    title: String,
+    description: String,
+    accessories: String,
+    shoesColor: String
+  ) {
+    dao.updateDailyUniform(id, title, description, accessories, shoesColor)
   }
 }

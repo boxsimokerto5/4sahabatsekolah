@@ -196,3 +196,30 @@ data class ParentStudentAccount(
   val username: String,
   val password: String = "ortu"
 )
+
+@Entity(tableName = "timetable_lessons")
+data class TimetableLesson(
+  @PrimaryKey(autoGenerate = true) val id: Long = 0,
+  val dayOfWeek: String, // "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"
+  val periodNumber: Int, // 1, 2, 3, etc.
+  val timeRange: String, // "07.30 - 08.45 WIB"
+  val subject: String, // e.g. "Tematik: Diriku", "PJOK (Olahraga)"
+  val teacherName: String, // "Bu Sarah, S.Pd"
+  val roomName: String = "Ruang Kelas 2-B",
+  val requiredItems: String = "", // e.g. "Buku Tematik 2A, Alat Tulis Lengkap"
+  val colorHex: String = "#38BDF8", // Pastel tint color
+  val isCompletedByParent: Boolean = false // Checklist "Buku sudah masuk ke tas"
+)
+
+@Entity(tableName = "daily_uniforms")
+data class DailyUniform(
+  @PrimaryKey(autoGenerate = true) val id: Long = 0,
+  val dayOfWeek: String, // "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"
+  val uniformTitle: String, // e.g. "Seragam Merah Putih Nasional"
+  val description: String, // e.g. "Kemeja putih pendek, celana/rok merah hati"
+  val accessories: String, // e.g. "Topi upacara merah-putih, dasi merah, sabuk sekolah"
+  val shoesColor: String = "Sepatu Hitam Polos & Kaos Kaki Putih",
+  val badgeCategory: String = "Seragam Wajib Upacara",
+  val previewColorHex: String = "#EF4444"
+)
+

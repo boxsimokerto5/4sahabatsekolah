@@ -56,5 +56,33 @@ class ExampleRobolectricTest {
       letterNumber = "048/SD-SS/2026"
     )
   }
+
+  @Test
+  fun `database stores and retrieves timetable and daily uniform`() = kotlinx.coroutines.runBlocking {
+    val context = ApplicationProvider.getApplicationContext<Context>()
+    val db = com.example.data.local.SchoolDatabase.getDatabase(context)
+    val dao = db.schoolDao()
+
+    val uniform = com.example.data.model.DailyUniform(
+      dayOfWeek = "Senin",
+      uniformTitle = "Seragam Merah Putih Nasional",
+      description = "Kemeja putih dan celana merah",
+      accessories = "Topi upacara dan dasi",
+      shoesColor = "Sepatu Hitam"
+    )
+    val uniformId = dao.insertDailyUniform(uniform)
+    assertNotNull(uniformId)
+
+    val lesson = com.example.data.model.TimetableLesson(
+      dayOfWeek = "Senin",
+      periodNumber = 1,
+      timeRange = "07.00 - 07.45 WIB",
+      subject = "Upacara Bendera",
+      teacherName = "Wali Kelas",
+      requiredItems = "Topi dan Dasi"
+    )
+    val lessonId = dao.insertTimetableLesson(lesson)
+    assertNotNull(lessonId)
+  }
 }
 

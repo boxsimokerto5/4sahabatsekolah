@@ -9,6 +9,7 @@ import com.example.data.model.AcademicReport
 import com.example.data.model.AttendanceRecord
 import com.example.data.model.ChatMessage
 import com.example.data.model.ClassroomRoom
+import com.example.data.model.DailyUniform
 import com.example.data.model.DismissalAlert
 import com.example.data.model.ExamSchedule
 import com.example.data.model.ParentStudentAccount
@@ -19,6 +20,7 @@ import com.example.data.model.SchoolAnnouncement
 import com.example.data.model.SchoolProfile
 import com.example.data.model.Student
 import com.example.data.model.TeacherAccount
+import com.example.data.model.TimetableLesson
 
 @Database(
   entities = [
@@ -36,9 +38,11 @@ import com.example.data.model.TeacherAccount
     SchoolProfile::class,
     ClassroomRoom::class,
     TeacherAccount::class,
-    ParentStudentAccount::class
+    ParentStudentAccount::class,
+    TimetableLesson::class,
+    DailyUniform::class
   ],
-  version = 5,
+  version = 6,
   exportSchema = false
 )
 abstract class SchoolDatabase : RoomDatabase() {

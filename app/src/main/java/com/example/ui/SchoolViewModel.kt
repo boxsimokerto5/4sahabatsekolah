@@ -9,6 +9,7 @@ import com.example.data.model.AcademicReport
 import com.example.data.model.AttendanceRecord
 import com.example.data.model.ChatMessage
 import com.example.data.model.ClassroomRoom
+import com.example.data.model.DailyUniform
 import com.example.data.model.DismissalAlert
 import com.example.data.model.ExamSchedule
 import com.example.data.model.ParentStudentAccount
@@ -19,6 +20,7 @@ import com.example.data.model.SchoolAnnouncement
 import com.example.data.model.SchoolProfile
 import com.example.data.model.Student
 import com.example.data.model.TeacherAccount
+import com.example.data.model.TimetableLesson
 import com.example.data.remote.SupabaseClientManager
 import com.example.data.repository.SchoolRepository
 import com.example.util.LocalNotificationService
@@ -63,7 +65,8 @@ enum class AppScreen {
   CHAT,
   EXAM,
   CALENDAR,
-  ANNOUNCEMENT
+  ANNOUNCEMENT,
+  TIMETABLE
 }
 
 class SchoolViewModel(application: Application) : AndroidViewModel(application) {
@@ -155,6 +158,12 @@ class SchoolViewModel(application: Application) : AndroidViewModel(application) 
     .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
   val parentStudentAccounts: StateFlow<List<ParentStudentAccount>> = repository.parentStudentAccounts
+    .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+  val timetableLessons: StateFlow<List<TimetableLesson>> = repository.timetableLessons
+    .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+  val dailyUniforms: StateFlow<List<DailyUniform>> = repository.dailyUniforms
     .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
   fun switchRole(role: UserRole) {
@@ -778,5 +787,57 @@ class SchoolViewModel(application: Application) : AndroidViewModel(application) 
     _currentRole.value = UserRole.ADMIN
     _currentScreen.value = AppScreen.ADMIN_DASHBOARD
     _snackbarEvent.value = "Beralih ke Dashboard Admin: ${school.schoolName}"
+  }
+
+  // Timetable & Uniform Operations
+  fun toggleLessonPackStatus(id: Long, isCompleted: Boolean) {
+    viewModelScope.launch {
+      repository.toggleLessonPackStatus(id, isCompleted)
+    }
+  }
+
+  fun addTimetableLesson(
+    dayOfWeek: String,
+    periodNumber: Int,
+    timeRange: String,
+    subject: String,
+    teacherName: String,
+    roomName: String,
+    requiredItems: String,
+    colorHex: String
+  ) {
+    viewModelScope.launch {
+      repository.insertTimetableLesson(
+        dayOfWeek = dayOfWeek,
+        periodNumber = periodNumber,
+        timeRange = timeRange,
+        subject = subject,
+        teacherName = teacherName,
+        roomName = roomName,
+        requiredItems = requiredItems,
+        colorHex = colorHex
+      )
+      _snackbarEvent.value = "Pelajaran $subject berhasil ditambahkan ke jadwal $dayOfWeek!"
+    }
+  }
+
+  fun deleteTimetableLesson(id: Long) {
+    viewModelScope.launch {
+      repository.deleteTimetableLesson(id)
+      _snackbarEvent.value = "Pelajaran berhasil dihapus dari jadwal."
+    }
+  }
+
+  fun updateDailyUniform(
+    id: Long,
+    title: String,
+    description: String,
+    accessories: String,
+    shoesColor: String
+  ) {
+    viewModelScope.launch {
+      repository.updateDailyUniform(id, title, description, accessories, shoesColor)
+      _snackbarEvent.value = "Aturan seragam sekolah berhasil diperbarui!"
+    }
   }
 }

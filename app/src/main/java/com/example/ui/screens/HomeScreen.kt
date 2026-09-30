@@ -23,6 +23,7 @@ import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Campaign
+import androidx.compose.material.icons.filled.Checkroom
 import androidx.compose.material.icons.filled.Collections
 import androidx.compose.material.icons.filled.EventNote
 import androidx.compose.material.icons.filled.Grade
@@ -51,12 +52,14 @@ import com.example.R
 import com.example.data.model.AcademicCalendarEvent
 import com.example.data.model.AcademicReport
 import com.example.data.model.AttendanceRecord
+import com.example.data.model.DailyUniform
 import com.example.data.model.DismissalAlert
 import com.example.data.model.PickupQueue
 import com.example.data.model.SavingTransaction
 import com.example.data.model.SchoolActivity
 import com.example.data.model.SchoolAnnouncement
 import com.example.data.model.Student
+import com.example.data.model.TimetableLesson
 import com.example.ui.AppScreen
 import com.example.ui.UserRole
 import com.example.ui.components.DashboardQuickAccessSection
@@ -91,6 +94,8 @@ fun HomeScreen(
   announcements: List<SchoolAnnouncement> = emptyList(),
   attendanceRecords: List<AttendanceRecord> = emptyList(),
   savingTransactions: List<SavingTransaction> = emptyList(),
+  timetableLessons: List<TimetableLesson> = emptyList(),
+  dailyUniforms: List<DailyUniform> = emptyList(),
   onNavigateTo: (AppScreen) -> Unit,
   onBroadcastDismissal: (Boolean, String, String) -> Unit,
   onNotifyParentArrival: (String) -> Unit,
@@ -202,6 +207,118 @@ fun HomeScreen(
         savingTransactions = savingTransactions,
         onNavigateTo = onNavigateTo
       )
+    }
+
+    // Featured Card: Kode Seragam Hari Ini & Jadwal Pelajaran
+    item {
+      val cal = java.util.Calendar.getInstance()
+      val todayDayName = when (cal.get(java.util.Calendar.DAY_OF_WEEK)) {
+        java.util.Calendar.MONDAY -> "Senin"
+        java.util.Calendar.TUESDAY -> "Selasa"
+        java.util.Calendar.WEDNESDAY -> "Rabu"
+        java.util.Calendar.THURSDAY -> "Kamis"
+        java.util.Calendar.FRIDAY -> "Jumat"
+        else -> "Senin"
+      }
+      val todayUniform = dailyUniforms.firstOrNull { it.dayOfWeek.equals(todayDayName, ignoreCase = true) }
+      val todayLessons = timetableLessons.filter { it.dayOfWeek.equals(todayDayName, ignoreCase = true) }
+
+      Card(
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+        modifier = Modifier
+          .fillMaxWidth()
+          .clickable { onNavigateTo(AppScreen.TIMETABLE) }
+          .testTag("uniform_and_timetable_card")
+      ) {
+        Column(modifier = Modifier.padding(14.dp)) {
+          Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+          ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+              Surface(
+                shape = CircleShape,
+                color = PastelPeachLight,
+                modifier = Modifier.size(34.dp)
+              ) {
+                Box(contentAlignment = Alignment.Center) {
+                  Icon(
+                    imageVector = Icons.Default.Checkroom,
+                    contentDescription = null,
+                    tint = PastelPeach,
+                    modifier = Modifier.size(18.dp)
+                  )
+                }
+              }
+              Spacer(modifier = Modifier.width(10.dp))
+              Column {
+                Text(
+                  text = "Seragam & Jadwal Hari $todayDayName ✨",
+                  fontWeight = FontWeight.Bold,
+                  fontSize = 13.sp,
+                  color = Color(0xFF1F2937)
+                )
+                Text(
+                  text = "${todayLessons.size} Mata Pelajaran • Aturan Busana & Tas",
+                  fontSize = 10.sp,
+                  color = Color(0xFF6B7280)
+                )
+              }
+            }
+
+            Surface(
+              shape = RoundedCornerShape(10.dp),
+              color = PastelSkyLight
+            ) {
+              Text(
+                text = "Buka Jadwal 🎒",
+                fontSize = 10.sp,
+                fontWeight = FontWeight.Bold,
+                color = PastelSky,
+                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+              )
+            }
+          }
+
+          Spacer(modifier = Modifier.height(10.dp))
+
+          Surface(
+            shape = RoundedCornerShape(12.dp),
+            color = Color(0xFFF9FAFB),
+            modifier = Modifier.fillMaxWidth()
+          ) {
+            Row(
+              modifier = Modifier.padding(10.dp),
+              verticalAlignment = Alignment.CenterVertically
+            ) {
+              Box(
+                modifier = Modifier
+                  .size(8.dp)
+                  .clip(CircleShape)
+                  .background(PastelPeach)
+              )
+              Spacer(modifier = Modifier.width(8.dp))
+              Column(modifier = Modifier.weight(1f)) {
+                Text(
+                  text = todayUniform?.uniformTitle ?: "Seragam Merah Putih Nasional",
+                  fontSize = 12.sp,
+                  fontWeight = FontWeight.Bold,
+                  color = Color(0xFF1F2937)
+                )
+                Text(
+                  text = todayUniform?.accessories?.takeIf { it.isNotBlank() } ?: "Lengkap atribut upacara dan bertopi sekolah",
+                  fontSize = 10.sp,
+                  color = Color(0xFF6B7280),
+                  maxLines = 1
+                )
+              }
+            }
+          }
+        }
+      }
     }
 
     // Academic Highlights & Calendar Overview
@@ -418,18 +535,18 @@ fun HomeScreen(
             horizontalArrangement = Arrangement.SpaceAround
           ) {
             QuickMenuItem(
+              icon = Icons.Default.Checkroom,
+              label = "Jadwal",
+              bgColor = PastelPeachLight,
+              tintColor = PastelPeach,
+              onClick = { onNavigateTo(AppScreen.TIMETABLE) }
+            )
+            QuickMenuItem(
               icon = Icons.Default.HowToReg,
               label = "Absensi",
               bgColor = PastelSkyLight,
               tintColor = PastelSky,
               onClick = { onNavigateTo(AppScreen.ATTENDANCE) }
-            )
-            QuickMenuItem(
-              icon = Icons.Default.Collections,
-              label = "Galeri",
-              bgColor = PastelPinkLight,
-              tintColor = PastelPink,
-              onClick = { onNavigateTo(AppScreen.GALLERY) }
             )
             QuickMenuItem(
               icon = Icons.AutoMirrored.Filled.Chat,
@@ -439,12 +556,29 @@ fun HomeScreen(
               onClick = { onNavigateTo(AppScreen.CHAT) }
             )
             QuickMenuItem(
-              icon = Icons.Default.EventNote,
-              label = "Ujian",
-              bgColor = PastelYellowLight,
-              tintColor = Color(0xFFD97706),
-              onClick = { onNavigateTo(AppScreen.EXAM) }
+              icon = Icons.Default.Collections,
+              label = "Galeri",
+              bgColor = PastelPinkLight,
+              tintColor = PastelPink,
+              onClick = { onNavigateTo(AppScreen.GALLERY) }
             )
+          }
+
+          Spacer(modifier = Modifier.height(14.dp))
+
+          Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.Start
+          ) {
+            Box(modifier = Modifier.padding(start = 12.dp)) {
+              QuickMenuItem(
+                icon = Icons.Default.EventNote,
+                label = "Ujian",
+                bgColor = PastelYellowLight,
+                tintColor = Color(0xFFD97706),
+                onClick = { onNavigateTo(AppScreen.EXAM) }
+              )
+            }
           }
         }
       }

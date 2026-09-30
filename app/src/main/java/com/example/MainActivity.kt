@@ -77,6 +77,7 @@ import com.example.ui.screens.SchoolAdminScreen
 import com.example.ui.screens.SchoolRegistrationScreen
 import com.example.ui.screens.SplashScreen
 import com.example.ui.screens.SuperadminScreen
+import com.example.ui.screens.TimetableScreen
 import com.example.ui.theme.MyApplicationTheme
 import com.example.ui.theme.PastelPeach
 import com.example.ui.theme.PastelPeachLight
@@ -158,6 +159,8 @@ fun SchoolParentApp(viewModel: SchoolViewModel = viewModel()) {
   val classrooms by viewModel.classrooms.collectAsStateWithLifecycle()
   val teachers by viewModel.teachers.collectAsStateWithLifecycle()
   val parentAccounts by viewModel.parentStudentAccounts.collectAsStateWithLifecycle()
+  val timetableLessons by viewModel.timetableLessons.collectAsStateWithLifecycle()
+  val dailyUniforms by viewModel.dailyUniforms.collectAsStateWithLifecycle()
   val isLoggedIn by viewModel.isLoggedIn.collectAsStateWithLifecycle()
   val loggedInAccount by viewModel.loggedInAccount.collectAsStateWithLifecycle()
   val snackbarEvent by viewModel.snackbarEvent.collectAsStateWithLifecycle()
@@ -407,6 +410,8 @@ fun SchoolParentApp(viewModel: SchoolViewModel = viewModel()) {
               announcements = announcements,
               attendanceRecords = attendanceRecords,
               savingTransactions = savingTransactions,
+              timetableLessons = timetableLessons,
+              dailyUniforms = dailyUniforms,
               onNavigateTo = { viewModel.navigateTo(it) },
               onBroadcastDismissal = { dismissed, time, msg ->
                 viewModel.broadcastDismissal(dismissed, time, msg)
@@ -505,6 +510,25 @@ fun SchoolParentApp(viewModel: SchoolViewModel = viewModel()) {
               },
               onNavigateBack = { viewModel.navigateTo(AppScreen.HOME) },
               onTestNotification = { viewModel.triggerTestAnnouncementNotification() }
+            )
+
+            AppScreen.TIMETABLE -> TimetableScreen(
+              lessons = timetableLessons,
+              uniforms = dailyUniforms,
+              currentRole = currentRole,
+              onTogglePackStatus = { id, isCompleted ->
+                viewModel.toggleLessonPackStatus(id, isCompleted)
+              },
+              onAddLesson = { day, period, time, subject, teacher, room, items, colorHex ->
+                viewModel.addTimetableLesson(day, period, time, subject, teacher, room, items, colorHex)
+              },
+              onDeleteLesson = { id ->
+                viewModel.deleteTimetableLesson(id)
+              },
+              onUpdateUniform = { id, title, desc, acc, shoes ->
+                viewModel.updateDailyUniform(id, title, desc, acc, shoes)
+              },
+              onNavigateBack = { viewModel.navigateTo(AppScreen.HOME) }
             )
           }
         }
