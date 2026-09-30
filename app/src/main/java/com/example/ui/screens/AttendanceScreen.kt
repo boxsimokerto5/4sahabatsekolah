@@ -24,6 +24,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.EventAvailable
+import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.Sick
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material3.AlertDialog
@@ -34,6 +35,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
@@ -74,6 +76,7 @@ fun AttendanceScreen(
   currentRole: UserRole,
   onSubmitPermission: (status: String, note: String) -> Unit,
   onNavigateBack: () -> Unit,
+  onTestNotification: (() -> Unit)? = null,
   modifier: Modifier = Modifier
 ) {
   BackHandler { onNavigateBack() }
@@ -167,23 +170,52 @@ fun AttendanceScreen(
 
             Spacer(modifier = Modifier.height(14.dp))
 
-            // Action: Pengajuan Izin Sakit / Izin Acara
-            Button(
-              onClick = { showPermissionDialog = true },
-              modifier = Modifier
-                .fillMaxWidth()
-                .height(44.dp)
-                .testTag("submit_permission_button"),
-              shape = RoundedCornerShape(12.dp),
-              colors = ButtonDefaults.buttonColors(containerColor = PastelSky)
+            // Action: Pengajuan Izin Sakit / Izin Acara & Tes Notifikasi
+            Row(
+              modifier = Modifier.fillMaxWidth(),
+              horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-              Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
-              Spacer(modifier = Modifier.width(6.dp))
-              Text(
-                text = if (currentRole == UserRole.PARENT) "Kirim Surat Izin / Sakit ke Guru" else "Input Absensi Cepat",
-                fontWeight = FontWeight.Bold,
-                fontSize = 13.sp
-              )
+              Button(
+                onClick = { showPermissionDialog = true },
+                modifier = Modifier
+                  .weight(1f)
+                  .height(44.dp)
+                  .testTag("submit_permission_button"),
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = PastelSky)
+              ) {
+                Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(
+                  text = if (currentRole == UserRole.PARENT) "Izin / Sakit" else "Input Absensi",
+                  fontWeight = FontWeight.Bold,
+                  fontSize = 12.sp
+                )
+              }
+
+              onTestNotification?.let { testAction ->
+                OutlinedButton(
+                  onClick = testAction,
+                  modifier = Modifier
+                    .height(44.dp)
+                    .testTag("test_attendance_notif_button"),
+                  shape = RoundedCornerShape(12.dp)
+                ) {
+                  Icon(
+                    Icons.Default.NotificationsActive,
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp),
+                    tint = PastelSky
+                  )
+                  Spacer(modifier = Modifier.width(4.dp))
+                  Text(
+                    text = "Tes Notif",
+                    fontSize = 12.sp,
+                    color = PastelSky,
+                    fontWeight = FontWeight.Bold
+                  )
+                }
+              }
             }
           }
         }

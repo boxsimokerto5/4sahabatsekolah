@@ -92,176 +92,197 @@ fun AppTopHeader(
     UserRole.ADMIN -> Brush.horizontalGradient(
       listOf(Color(0xFF38BDF8), Color(0xFF0284C7), Color(0xFF0369A1))
     )
+    UserRole.SUPERADMIN -> Brush.horizontalGradient(
+      listOf(Color(0xFF6366F1), Color(0xFF4F46E5), Color(0xFF4338CA))
+    )
   }
 
   Box(
     modifier = modifier
       .fillMaxWidth()
       .background(roleGradient)
-      .padding(horizontal = 16.dp, vertical = 14.dp)
+      .padding(horizontal = 14.dp, vertical = 7.dp)
   ) {
-    Column {
+    Row(
+      modifier = Modifier.fillMaxWidth(),
+      horizontalArrangement = Arrangement.SpaceBetween,
+      verticalAlignment = Alignment.CenterVertically
+    ) {
+      // Left: Profile & School info (slim layout)
       Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.weight(1f, fill = false)
       ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-          Box(
-            modifier = Modifier
-              .size(44.dp)
-              .clip(CircleShape)
-              .background(Color.White.copy(alpha = 0.25f)),
-            contentAlignment = Alignment.Center
+        Box(
+          modifier = Modifier
+            .size(32.dp)
+            .clip(CircleShape)
+            .background(Color.White.copy(alpha = 0.25f)),
+          contentAlignment = Alignment.Center
+        ) {
+          Icon(
+            imageVector = if (currentRole == UserRole.PARENT) Icons.Default.School else Icons.Default.Person,
+            contentDescription = "Role Icon",
+            tint = Color.White,
+            modifier = Modifier.size(18.dp)
+          )
+        }
+
+        Spacer(modifier = Modifier.width(8.dp))
+
+        Column {
+          Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
           ) {
-            Icon(
-              imageVector = if (currentRole == UserRole.PARENT) Icons.Default.School else Icons.Default.Person,
-              contentDescription = "Role Icon",
-              tint = Color.White,
-              modifier = Modifier.size(24.dp)
-            )
-          }
-
-          Spacer(modifier = Modifier.width(10.dp))
-
-          Column {
-            Text(
-              text = when (currentRole) {
-                UserRole.PARENT -> "SD Ceria Bangsa"
-                UserRole.TEACHER -> "Portal Wali Kelas 2-B"
-                UserRole.ADMIN -> "Portal Administrator"
-              },
-              fontSize = 11.sp,
-              fontWeight = FontWeight.Medium,
-              color = Color.White.copy(alpha = 0.9f)
-            )
             Text(
               text = when (currentRole) {
                 UserRole.PARENT -> student?.name ?: "Rafa Al-Ghifari"
                 UserRole.TEACHER -> "Bu Sarah, S.Pd"
-                UserRole.ADMIN -> "Drs. H. Mulyono (Admin)"
+                UserRole.ADMIN -> "Drs. H. Mulyono"
+                UserRole.SUPERADMIN -> "Master Superadmin"
               },
-              fontSize = 17.sp,
+              fontSize = 13.sp,
+              fontWeight = FontWeight.Bold,
+              color = Color.White,
+              maxLines = 1
+            )
+
+            Surface(
+              shape = RoundedCornerShape(6.dp),
+              color = Color.White.copy(alpha = 0.25f)
+            ) {
+              Text(
+                text = when (currentRole) {
+                  UserRole.PARENT -> student?.gradeClass ?: "Kelas 2-B"
+                  UserRole.TEACHER -> "Wali Kelas 2B"
+                  UserRole.ADMIN -> "Kepsek"
+                  UserRole.SUPERADMIN -> "Overseer"
+                },
+                fontSize = 9.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.White,
+                modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp)
+              )
+            }
+          }
+
+          Text(
+            text = when (currentRole) {
+              UserRole.PARENT -> "SD Ceria Bangsa • Bunda Dina"
+              UserRole.TEACHER -> "SD Ceria Bangsa • KBM Aktif"
+              UserRole.ADMIN -> "SD Ceria Bangsa • Manajemen"
+              UserRole.SUPERADMIN -> "SahabatSekolah Enterprise Network"
+            },
+            fontSize = 10.sp,
+            color = Color.White.copy(alpha = 0.88f),
+            maxLines = 1
+          )
+        }
+      }
+
+      Spacer(modifier = Modifier.width(6.dp))
+
+      // Right: Action buttons (compact pills)
+      Row(
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        verticalAlignment = Alignment.CenterVertically
+      ) {
+        // Supabase Cloud button (compact)
+        Surface(
+          shape = RoundedCornerShape(14.dp),
+          color = if (isSupabaseConfigured) Color(0xFF10B981).copy(alpha = 0.35f) else Color.White.copy(alpha = 0.22f),
+          modifier = Modifier
+            .clickable(onClick = onOpenSupabaseConfig)
+            .border(1.dp, Color.White.copy(alpha = 0.4f), RoundedCornerShape(14.dp))
+            .testTag("open_supabase_config_button")
+        ) {
+          Row(
+            modifier = Modifier.padding(horizontal = 7.dp, vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically
+          ) {
+            Icon(
+              imageVector = if (isSyncing) Icons.Default.Sync else if (isSupabaseConfigured) Icons.Default.CloudDone else Icons.Default.CloudQueue,
+              contentDescription = "Supabase Status",
+              tint = Color.White,
+              modifier = Modifier.size(13.dp)
+            )
+            Spacer(modifier = Modifier.width(3.dp))
+            Text(
+              text = if (isSyncing) "Sync" else if (isSupabaseConfigured) "Cloud" else "DB",
+              fontSize = 10.sp,
               fontWeight = FontWeight.Bold,
               color = Color.White
             )
           }
         }
 
-        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-          // Supabase Cloud button
-          Surface(
-            shape = RoundedCornerShape(18.dp),
-            color = if (isSupabaseConfigured) Color(0xFF10B981).copy(alpha = 0.35f) else Color.White.copy(alpha = 0.22f),
-            modifier = Modifier
-              .clickable(onClick = onOpenSupabaseConfig)
-              .border(1.dp, Color.White.copy(alpha = 0.45f), RoundedCornerShape(18.dp))
-              .testTag("open_supabase_config_button")
-          ) {
-            Row(
-              modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
-              verticalAlignment = Alignment.CenterVertically
-            ) {
-              Icon(
-                imageVector = if (isSyncing) Icons.Default.Sync else if (isSupabaseConfigured) Icons.Default.CloudDone else Icons.Default.CloudQueue,
-                contentDescription = "Supabase Status",
-                tint = Color.White,
-                modifier = Modifier.size(15.dp)
-              )
-              Spacer(modifier = Modifier.width(4.dp))
-              Text(
-                text = if (isSyncing) "Syncing" else if (isSupabaseConfigured) "Cloud 🟢" else "Supabase",
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color.White
-              )
+        // Switch role pill button (compact)
+        Surface(
+          shape = RoundedCornerShape(14.dp),
+          color = Color.White.copy(alpha = 0.22f),
+          modifier = Modifier
+            .clickable {
+              val nextRole = when (currentRole) {
+                UserRole.PARENT -> UserRole.TEACHER
+                UserRole.TEACHER -> UserRole.ADMIN
+                UserRole.ADMIN -> UserRole.SUPERADMIN
+                UserRole.SUPERADMIN -> UserRole.PARENT
+              }
+              onSwitchRole(nextRole)
             }
+            .border(1.dp, Color.White.copy(alpha = 0.4f), RoundedCornerShape(14.dp))
+            .testTag("switch_role_button")
+        ) {
+          Row(
+            modifier = Modifier.padding(horizontal = 7.dp, vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically
+          ) {
+            Icon(
+              imageVector = Icons.Default.SwapHoriz,
+              contentDescription = "Ganti Peran",
+              tint = Color.White,
+              modifier = Modifier.size(13.dp)
+            )
+            Spacer(modifier = Modifier.width(3.dp))
+            Text(
+              text = when (currentRole) {
+                UserRole.PARENT -> "Bunda"
+                UserRole.TEACHER -> "Guru"
+                UserRole.ADMIN -> "Admin"
+                UserRole.SUPERADMIN -> "Super"
+              },
+              fontSize = 10.sp,
+              fontWeight = FontWeight.Bold,
+              color = Color.White
+            )
           }
+        }
 
-          // Switch role pill button
+        // Logout button (compact)
+        if (onLogout != null) {
           Surface(
-            shape = RoundedCornerShape(18.dp),
+            shape = RoundedCornerShape(14.dp),
             color = Color.White.copy(alpha = 0.22f),
             modifier = Modifier
-              .clickable {
-                val nextRole = when (currentRole) {
-                  UserRole.PARENT -> UserRole.TEACHER
-                  UserRole.TEACHER -> UserRole.ADMIN
-                  UserRole.ADMIN -> UserRole.PARENT
-                }
-                onSwitchRole(nextRole)
-              }
-              .border(1.dp, Color.White.copy(alpha = 0.4f), RoundedCornerShape(18.dp))
-              .testTag("switch_role_button")
+              .clickable(onClick = onLogout)
+              .border(1.dp, Color.White.copy(alpha = 0.4f), RoundedCornerShape(14.dp))
+              .testTag("header_logout_button")
           ) {
-            Row(
-              modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
-              verticalAlignment = Alignment.CenterVertically
+            Box(
+              modifier = Modifier.padding(horizontal = 6.dp, vertical = 4.dp),
+              contentAlignment = Alignment.Center
             ) {
               Icon(
-                imageVector = Icons.Default.SwapHoriz,
-                contentDescription = "Ganti Peran",
+                imageVector = Icons.AutoMirrored.Filled.Logout,
+                contentDescription = "Keluar / Logout",
                 tint = Color.White,
-                modifier = Modifier.size(15.dp)
+                modifier = Modifier.size(13.dp)
               )
-              Spacer(modifier = Modifier.width(3.dp))
-              Text(
-                text = when (currentRole) {
-                  UserRole.PARENT -> "Bunda"
-                  UserRole.TEACHER -> "Guru"
-                  UserRole.ADMIN -> "Admin"
-                },
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color.White
-              )
-            }
-          }
-
-          // Logout button
-          if (onLogout != null) {
-            Surface(
-              shape = RoundedCornerShape(18.dp),
-              color = Color.White.copy(alpha = 0.22f),
-              modifier = Modifier
-                .clickable(onClick = onLogout)
-                .border(1.dp, Color.White.copy(alpha = 0.4f), RoundedCornerShape(18.dp))
-                .testTag("header_logout_button")
-            ) {
-              Row(
-                modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
-                verticalAlignment = Alignment.CenterVertically
-              ) {
-                Icon(
-                  imageVector = Icons.AutoMirrored.Filled.Logout,
-                  contentDescription = "Keluar / Logout",
-                  tint = Color.White,
-                  modifier = Modifier.size(15.dp)
-                )
-                Spacer(modifier = Modifier.width(3.dp))
-                Text(
-                  text = "Keluar",
-                  fontSize = 11.sp,
-                  fontWeight = FontWeight.Bold,
-                  color = Color.White
-                )
-              }
             }
           }
         }
       }
-
-      Spacer(modifier = Modifier.height(6.dp))
-
-      Text(
-        text = if (currentRole == UserRole.PARENT) {
-          "${student?.gradeClass ?: "Kelas 2-B"} • ${student?.studentNumber ?: "NISN 00928371"} • Bunda Dina"
-        } else {
-          "Kelola KBM, Pengumuman Pulang, Tabungan, & Absensi Kelas"
-        },
-        fontSize = 12.sp,
-        color = Color.White.copy(alpha = 0.88f)
-      )
     }
   }
 }

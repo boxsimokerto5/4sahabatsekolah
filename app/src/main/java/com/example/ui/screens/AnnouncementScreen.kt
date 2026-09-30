@@ -38,6 +38,7 @@ import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.MarkEmailRead
+import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PriorityHigh
 import androidx.compose.material.icons.filled.PushPin
@@ -111,6 +112,7 @@ fun AnnouncementScreen(
   onMarkAsRead: (Long, Boolean) -> Unit,
   onDeleteAnnouncement: (Long) -> Unit,
   onNavigateBack: () -> Unit,
+  onTestNotification: (() -> Unit)? = null,
   modifier: Modifier = Modifier
 ) {
   BackHandler { onNavigateBack() }
@@ -166,6 +168,19 @@ fun AnnouncementScreen(
           }
         },
         actions = {
+          onTestNotification?.let { testAction ->
+            IconButton(
+              onClick = testAction,
+              modifier = Modifier.testTag("test_announcement_notif_button")
+            ) {
+              Icon(
+                Icons.Default.NotificationsActive,
+                contentDescription = "Uji Coba Notifikasi",
+                tint = PastelPeach
+              )
+            }
+          }
+
           Surface(
             shape = RoundedCornerShape(12.dp),
             color = if (currentRole == UserRole.TEACHER) PastelPeachLight else PastelSkyLight,

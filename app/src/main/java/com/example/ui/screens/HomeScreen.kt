@@ -53,11 +53,13 @@ import com.example.data.model.AcademicReport
 import com.example.data.model.AttendanceRecord
 import com.example.data.model.DismissalAlert
 import com.example.data.model.PickupQueue
+import com.example.data.model.SavingTransaction
 import com.example.data.model.SchoolActivity
 import com.example.data.model.SchoolAnnouncement
 import com.example.data.model.Student
 import com.example.ui.AppScreen
 import com.example.ui.UserRole
+import com.example.ui.components.DashboardQuickAccessSection
 import com.example.ui.components.DismissalSection
 import com.example.ui.components.SummaryStatCard
 import com.example.ui.theme.PastelLilac
@@ -87,6 +89,8 @@ fun HomeScreen(
   recentActivities: List<SchoolActivity>,
   calendarEvents: List<AcademicCalendarEvent> = emptyList(),
   announcements: List<SchoolAnnouncement> = emptyList(),
+  attendanceRecords: List<AttendanceRecord> = emptyList(),
+  savingTransactions: List<SavingTransaction> = emptyList(),
   onNavigateTo: (AppScreen) -> Unit,
   onBroadcastDismissal: (Boolean, String, String) -> Unit,
   onNotifyParentArrival: (String) -> Unit,
@@ -94,7 +98,7 @@ fun HomeScreen(
   onLikeActivity: (Long) -> Unit,
   modifier: Modifier = Modifier
 ) {
-  val currencyFormatter = NumberFormat.getCurrencyInstance(Locale("id", "ID"))
+  val currencyFormatter = NumberFormat.getCurrencyInstance(Locale.forLanguageTag("id-ID"))
   val formattedSavings = currencyFormatter.format(totalSavings).replace(",00", "")
 
   LazyColumn(
@@ -116,7 +120,7 @@ fun HomeScreen(
         Box(
           modifier = Modifier
             .fillMaxWidth()
-            .height(180.dp)
+            .height(125.dp)
         ) {
           // Hero illustration
           Image(
@@ -144,28 +148,28 @@ fun HomeScreen(
           Column(
             modifier = Modifier
               .align(Alignment.BottomStart)
-              .padding(16.dp)
+              .padding(12.dp)
           ) {
             Surface(
               color = PastelPeach,
-              shape = RoundedCornerShape(10.dp)
+              shape = RoundedCornerShape(8.dp)
             ) {
               Text(
                 text = if (currentRole == UserRole.PARENT) "Selamat Datang Bunda Dina! ✨" else "Ruang Kerja Guru ✨",
-                fontSize = 11.sp,
+                fontSize = 10.sp,
                 fontWeight = FontWeight.Bold,
                 color = Color.White,
-                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.dp)
               )
             }
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(2.dp))
             Text(
               text = if (currentRole == UserRole.PARENT) {
                 "Pantau tumbuh kembang ceria Ananda Rafa hari ini"
               } else {
                 "Kelas 2-B: 28 Siswa • Pembelajaran Hari Ini Berjalan Ceria"
               },
-              fontSize = 15.sp,
+              fontSize = 13.sp,
               fontWeight = FontWeight.Bold,
               color = Color.White
             )
@@ -186,238 +190,47 @@ fun HomeScreen(
       )
     }
 
-    // Official School Announcement Banner (Papan Pengumuman & Mading Sekolah)
+    // Featured Quick Access Cards: Announcements, Attendance Status, and Savings Progress
     item {
-      val topAnnouncement = announcements.firstOrNull { it.isPinned } ?: announcements.firstOrNull()
-      val unreadCount = announcements.count { !it.isReadByParent }
-
-      Card(
-        shape = RoundedCornerShape(22.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-        modifier = Modifier
-          .fillMaxWidth()
-          .clickable { onNavigateTo(AppScreen.ANNOUNCEMENT) }
-          .testTag("home_announcement_banner_card")
-      ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-          Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-          ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-              Surface(
-                shape = CircleShape,
-                color = PastelPeachLight,
-                modifier = Modifier.size(34.dp)
-              ) {
-                Box(contentAlignment = Alignment.Center) {
-                  Icon(
-                    Icons.Default.Campaign,
-                    contentDescription = null,
-                    tint = PastelPeach,
-                    modifier = Modifier.size(19.dp)
-                  )
-                }
-              }
-              Spacer(modifier = Modifier.width(10.dp))
-              Column {
-                Text(
-                  text = "Pengumuman Resmi Sekolah 📢",
-                  fontSize = 14.sp,
-                  fontWeight = FontWeight.Bold,
-                  color = Color(0xFF1F2937)
-                )
-                Text(
-                  text = "Surat edaran & informasi penting sekolah",
-                  fontSize = 11.sp,
-                  color = Color.Gray
-                )
-              }
-            }
-
-            if (currentRole == UserRole.PARENT && unreadCount > 0) {
-              Surface(
-                shape = RoundedCornerShape(8.dp),
-                color = PastelPinkLight
-              ) {
-                Text(
-                  text = "$unreadCount Baru",
-                  fontSize = 11.sp,
-                  fontWeight = FontWeight.Bold,
-                  color = Color(0xFFBE185D),
-                  modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
-                )
-              }
-            } else {
-              Text(
-                text = "Mading →",
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Bold,
-                color = PastelPeach
-              )
-            }
-          }
-
-          if (topAnnouncement != null) {
-            Spacer(modifier = Modifier.height(12.dp))
-            Surface(
-              shape = RoundedCornerShape(14.dp),
-              color = Color(0xFFF9FAFB),
-              modifier = Modifier.fillMaxWidth()
-            ) {
-              Column(modifier = Modifier.padding(12.dp)) {
-                Row(
-                  modifier = Modifier.fillMaxWidth(),
-                  horizontalArrangement = Arrangement.SpaceBetween,
-                  verticalAlignment = Alignment.CenterVertically
-                ) {
-                  Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                  ) {
-                    if (topAnnouncement.isPinned) {
-                      Surface(
-                        shape = RoundedCornerShape(6.dp),
-                        color = PastelYellowLight
-                      ) {
-                        Text(
-                          text = "📌 Penting",
-                          fontSize = 10.sp,
-                          fontWeight = FontWeight.Bold,
-                          color = Color(0xFFB78103),
-                          modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                        )
-                      }
-                    }
-
-                    Surface(
-                      shape = RoundedCornerShape(6.dp),
-                      color = when (topAnnouncement.category) {
-                        "URGENT" -> PastelPinkLight
-                        "EDARAN" -> PastelSkyLight
-                        "KEGIATAN" -> PastelMintLight
-                        else -> PastelLilacLight
-                      }
-                    ) {
-                      Text(
-                        text = when (topAnnouncement.category) {
-                          "URGENT" -> "🔴 Urgent"
-                          "EDARAN" -> "📜 Surat Edaran"
-                          "KEGIATAN" -> "🎉 Kegiatan"
-                          else -> "📚 Akademik"
-                        },
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = when (topAnnouncement.category) {
-                          "URGENT" -> Color(0xFFBE185D)
-                          "EDARAN" -> Color(0xFF0369A1)
-                          "KEGIATAN" -> Color(0xFF15803D)
-                          else -> Color(0xFF6D28D9)
-                        },
-                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                      )
-                    }
-                  }
-
-                  Text(
-                    text = topAnnouncement.date,
-                    fontSize = 11.sp,
-                    color = Color.Gray,
-                    fontWeight = FontWeight.Medium
-                  )
-                }
-
-                Spacer(modifier = Modifier.height(6.dp))
-
-                Text(
-                  text = topAnnouncement.title,
-                  fontWeight = FontWeight.Bold,
-                  fontSize = 13.sp,
-                  color = Color(0xFF1F2937),
-                  maxLines = 2,
-                  lineHeight = 18.sp
-                )
-
-                if (topAnnouncement.letterNumber.isNotBlank()) {
-                  Spacer(modifier = Modifier.height(3.dp))
-                  Text(
-                    text = "No: ${topAnnouncement.letterNumber} • Oleh ${topAnnouncement.author}",
-                    fontSize = 10.sp,
-                    color = Color(0xFF6B7280)
-                  )
-                }
-              }
-            }
-          }
-        }
-      }
+      DashboardQuickAccessSection(
+        student = student,
+        currentRole = currentRole,
+        announcements = announcements,
+        latestAttendance = latestAttendance,
+        attendanceRecords = attendanceRecords,
+        totalSavings = totalSavings,
+        savingTransactions = savingTransactions,
+        onNavigateTo = onNavigateTo
+      )
     }
 
-    // Quick Stats Overview (2x2 Grid)
+    // Academic Highlights & Calendar Overview
     item {
-      Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text(
-          text = "Ringkasan Ananda Hari Ini 🌸",
-          fontSize = 16.sp,
-          fontWeight = FontWeight.Bold,
-          color = Color(0xFF1F2937)
+      Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+      ) {
+        SummaryStatCard(
+          title = "Nilai Terbaru",
+          value = latestReport?.let { "${it.score}/100" } ?: "95/100",
+          subtitle = latestReport?.let { "${it.subject} (${it.badge})" } ?: "Matematika",
+          icon = Icons.Default.Grade,
+          accentColor = PastelPeach,
+          backgroundColor = PastelPeachLight,
+          modifier = Modifier.weight(1f),
+          onClick = { onNavigateTo(AppScreen.ACADEMIC) }
         )
 
-        Row(
-          modifier = Modifier.fillMaxWidth(),
-          horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-          SummaryStatCard(
-            title = "Nilai Terbaru",
-            value = latestReport?.let { "${it.score}/100" } ?: "95/100",
-            subtitle = latestReport?.let { "${it.subject} (${it.badge})" } ?: "Matematika",
-            icon = Icons.Default.Grade,
-            accentColor = PastelPeach,
-            backgroundColor = PastelPeachLight,
-            modifier = Modifier.weight(1f),
-            onClick = { onNavigateTo(AppScreen.ACADEMIC) }
-          )
-
-          SummaryStatCard(
-            title = "Tabungan Siswa",
-            value = formattedSavings,
-            subtitle = "Target: Rp 250rb (66%)",
-            icon = Icons.Default.AccountBalanceWallet,
-            accentColor = PastelMint,
-            backgroundColor = PastelMintLight,
-            modifier = Modifier.weight(1f),
-            onClick = { onNavigateTo(AppScreen.SAVINGS) }
-          )
-        }
-
-        Row(
-          modifier = Modifier.fillMaxWidth(),
-          horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-          SummaryStatCard(
-            title = "Absensi Harian",
-            value = latestAttendance?.status ?: "HADIR",
-            subtitle = latestAttendance?.time ?: "06:55 WIB",
-            icon = Icons.Default.HowToReg,
-            accentColor = PastelSky,
-            backgroundColor = PastelSkyLight,
-            modifier = Modifier.weight(1f),
-            onClick = { onNavigateTo(AppScreen.ATTENDANCE) }
-          )
-
-          SummaryStatCard(
-            title = "Kalender Kegiatan",
-            value = if (calendarEvents.isNotEmpty()) "8 Okt" else "Kalender",
-            subtitle = if (calendarEvents.isNotEmpty()) calendarEvents.first().title.take(18) + "..." else "Lihat Semua",
-            icon = Icons.Default.CalendarMonth,
-            accentColor = PastelLilac,
-            backgroundColor = PastelLilacLight,
-            modifier = Modifier.weight(1f),
-            onClick = { onNavigateTo(AppScreen.CALENDAR) }
-          )
-        }
+        SummaryStatCard(
+          title = "Agenda Terdekat",
+          value = if (calendarEvents.isNotEmpty()) "8 Okt" else "Kalender",
+          subtitle = if (calendarEvents.isNotEmpty()) calendarEvents.first().title.take(18) + "..." else "Lihat Semua",
+          icon = Icons.Default.CalendarMonth,
+          accentColor = PastelLilac,
+          backgroundColor = PastelLilacLight,
+          modifier = Modifier.weight(1f),
+          onClick = { onNavigateTo(AppScreen.CALENDAR) }
+        )
       }
     }
 

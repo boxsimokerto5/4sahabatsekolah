@@ -21,6 +21,7 @@ import com.example.data.model.Student
 import com.example.data.model.TeacherAccount
 import com.example.data.remote.SupabaseClientManager
 import com.example.data.repository.SchoolRepository
+import com.example.util.LocalNotificationService
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -68,6 +69,7 @@ enum class AppScreen {
 class SchoolViewModel(application: Application) : AndroidViewModel(application) {
 
   val supabaseManager = SupabaseClientManager(application)
+  val notificationService = LocalNotificationService(application)
   private val repository: SchoolRepository
 
   private val _isLoggedIn = MutableStateFlow(false)
@@ -444,13 +446,51 @@ class SchoolViewModel(application: Application) : AndroidViewModel(application) 
     }
   }
 
-  // Submit Attendance Permission
+  // Submit Attendance Permission & Alert Parents
   fun submitAttendancePermission(status: String, note: String) {
     viewModelScope.launch {
-      val now = SimpleDateFormat("dd MMM yyyy", Locale("id", "ID")).format(Date())
+      val now = SimpleDateFormat("dd MMM yyyy", Locale.forLanguageTag("id-ID")).format(Date())
+      val timeFormat = SimpleDateFormat("HH:mm 'WIB'", Locale.forLanguageTag("id-ID")).format(Date())
       repository.submitAttendancePermission(status, note, now)
-      _snackbarEvent.value = "Pengajuan izin berhasil dikirim ke Bu Guru."
+      val studentName = student.value?.name ?: "Rafa Al-Ghifari"
+      notificationService.notifyAttendanceMarked(studentName, status, timeFormat, note)
+      _snackbarEvent.value = "Presensi $studentName berhasil dicatat ($status) & notifikasi terkirim!"
     }
+  }
+
+  // Teacher marks student attendance and alerts parents
+  fun markStudentAttendance(studentName: String, status: String, note: String = "") {
+    viewModelScope.launch {
+      val now = SimpleDateFormat("dd MMM yyyy", Locale.forLanguageTag("id-ID")).format(Date())
+      val timeFormat = SimpleDateFormat("HH:mm 'WIB'", Locale.forLanguageTag("id-ID")).format(Date())
+      repository.submitAttendancePermission(status, note, now)
+      notificationService.notifyAttendanceMarked(studentName, status, timeFormat, note)
+      _snackbarEvent.value = "Presensi $studentName ($status) berhasil ditandai & notifikasi terkirim!"
+    }
+  }
+
+  // Trigger test attendance notification
+  fun triggerTestAttendanceNotification() {
+    val studentName = student.value?.name ?: "Rafa Al-Ghifari"
+    val timeFormat = SimpleDateFormat("HH:mm 'WIB'", Locale.forLanguageTag("id-ID")).format(Date())
+    notificationService.notifyAttendanceMarked(
+      studentName = studentName,
+      status = "HADIR",
+      time = timeFormat,
+      note = "Suhu 36.4°C • Hadir tepat waktu dengan ceria di kelas 2-B"
+    )
+    _snackbarEvent.value = "Notifikasi presensi ananda berhasil dikirim ke perangkat!"
+  }
+
+  // Trigger test announcement notification
+  fun triggerTestAnnouncementNotification() {
+    notificationService.notifyAnnouncementPosted(
+      title = "Pemberitahuan Karyawisata Edukasi ke Planetarium Jakarta",
+      category = "EDARAN",
+      author = "Kepala Sekolah SD Ceria Bangsa",
+      letterNumber = "048/SD-SS/SE/X/2026"
+    )
+    _snackbarEvent.value = "Notifikasi pengumuman sekolah berhasil dikirim ke perangkat!"
   }
 
   // Like activity
@@ -541,7 +581,7 @@ class SchoolViewModel(application: Application) : AndroidViewModel(application) 
     attachmentTitle: String
   ) {
     viewModelScope.launch {
-      val now = SimpleDateFormat("dd MMM yyyy", Locale("id", "ID")).format(Date())
+      val now = SimpleDateFormat("dd MMM yyyy", Locale.forLanguageTag("id-ID")).format(Date())
       val author = if (_currentRole.value == UserRole.TEACHER) "Bu Sarah, S.Pd (Wali Kelas)" else "Kepala Sekolah / Tata Usaha"
       repository.addAnnouncement(
         title = title,
@@ -554,7 +594,13 @@ class SchoolViewModel(application: Application) : AndroidViewModel(application) 
         isPinned = isPinned,
         attachmentTitle = attachmentTitle
       )
-      _snackbarEvent.value = "Pengumuman resmi berhasil diterbitkan ke mading sekolah!"
+      notificationService.notifyAnnouncementPosted(
+        title = title,
+        category = category,
+        author = author,
+        letterNumber = letterNumber
+      )
+      _snackbarEvent.value = "Pengumuman resmi berhasil diterbitkan & notifikasi dikirim ke orang tua!"
     }
   }
 

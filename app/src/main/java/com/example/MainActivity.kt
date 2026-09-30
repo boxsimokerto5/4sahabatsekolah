@@ -1,9 +1,16 @@
 package com.example
 
+import android.Manifest
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -43,10 +50,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.ui.AppScreen
@@ -67,20 +76,64 @@ import com.example.ui.screens.SavingsScreen
 import com.example.ui.screens.SchoolAdminScreen
 import com.example.ui.screens.SchoolRegistrationScreen
 import com.example.ui.screens.SplashScreen
+import com.example.ui.screens.SuperadminScreen
 import com.example.ui.theme.MyApplicationTheme
 import com.example.ui.theme.PastelPeach
 import com.example.ui.theme.PastelPeachLight
 import com.example.ui.theme.SoftBackground
+import com.example.util.LocalNotificationService
 
 class MainActivity : ComponentActivity() {
+  private val currentIntentState = mutableStateOf<Intent?>(null)
+
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
+    currentIntentState.value = intent
     enableEdgeToEdge()
     setContent {
       MyApplicationTheme {
-        SchoolParentApp()
+        val viewModel: SchoolViewModel = viewModel()
+        val context = LocalContext.current
+
+        // Handle navigation when launched from a Notification
+        val currentIntent = currentIntentState.value
+        LaunchedEffect(currentIntent) {
+          currentIntent?.getStringExtra(LocalNotificationService.EXTRA_TARGET_SCREEN)?.let { targetScreen ->
+            when (targetScreen) {
+              LocalNotificationService.SCREEN_ATTENDANCE -> viewModel.navigateTo(AppScreen.ATTENDANCE)
+              LocalNotificationService.SCREEN_ANNOUNCEMENT -> viewModel.navigateTo(AppScreen.ANNOUNCEMENT)
+            }
+          }
+        }
+
+        // Request POST_NOTIFICATIONS permission on Android 13+ (API 33+)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+          val permissionLauncher = rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.RequestPermission()
+          ) { isGranted ->
+            Log.d("MainActivity", "Notification permission granted: $isGranted")
+          }
+
+          LaunchedEffect(Unit) {
+            val permissionStatus = ContextCompat.checkSelfPermission(
+              context,
+              Manifest.permission.POST_NOTIFICATIONS
+            )
+            if (permissionStatus != PackageManager.PERMISSION_GRANTED) {
+              permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            }
+          }
+        }
+
+        SchoolParentApp(viewModel)
       }
     }
+  }
+
+  override fun onNewIntent(intent: Intent) {
+    super.onNewIntent(intent)
+    setIntent(intent)
+    currentIntentState.value = intent
   }
 }
 
@@ -101,6 +154,7 @@ fun SchoolParentApp(viewModel: SchoolViewModel = viewModel()) {
   val academicCalendarEvents by viewModel.academicCalendarEvents.collectAsStateWithLifecycle()
   val announcements by viewModel.announcements.collectAsStateWithLifecycle()
   val schoolProfile by viewModel.schoolProfile.collectAsStateWithLifecycle()
+  val allSchoolProfiles by viewModel.allSchoolProfiles.collectAsStateWithLifecycle()
   val classrooms by viewModel.classrooms.collectAsStateWithLifecycle()
   val teachers by viewModel.teachers.collectAsStateWithLifecycle()
   val parentAccounts by viewModel.parentStudentAccounts.collectAsStateWithLifecycle()
@@ -122,7 +176,7 @@ fun SchoolParentApp(viewModel: SchoolViewModel = viewModel()) {
     }
   }
 
-  val showBottomNav = isLoggedIn && currentRole != UserRole.ADMIN && currentScreen in listOf(
+  val showBottomNav = isLoggedIn && currentRole != UserRole.ADMIN && currentRole != UserRole.SUPERADMIN && currentScreen in listOf(
     AppScreen.HOME,
     AppScreen.ACADEMIC,
     AppScreen.SAVINGS,
@@ -330,6 +384,16 @@ fun SchoolParentApp(viewModel: SchoolViewModel = viewModel()) {
               onLogout = { viewModel.logout() }
             )
 
+            AppScreen.SUPERADMIN_DASHBOARD -> SuperadminScreen(
+              schools = allSchoolProfiles,
+              onApproveSchool = { viewModel.approveSchoolRegistration(it) },
+              onRejectSchool = { id, reason -> viewModel.rejectSchoolRegistration(id, reason) },
+              onToggleSuspension = { id, currentStatus -> viewModel.toggleSchoolSuspension(id, currentStatus) },
+              onDeleteSchool = { viewModel.deleteSchoolProfile(it) },
+              onImpersonateSchool = { viewModel.impersonateSchool(it) },
+              onLogout = { viewModel.logout() }
+            )
+
             AppScreen.HOME -> HomeScreen(
               student = student,
               currentRole = currentRole,
@@ -341,6 +405,8 @@ fun SchoolParentApp(viewModel: SchoolViewModel = viewModel()) {
               recentActivities = activities,
               calendarEvents = academicCalendarEvents,
               announcements = announcements,
+              attendanceRecords = attendanceRecords,
+              savingTransactions = savingTransactions,
               onNavigateTo = { viewModel.navigateTo(it) },
               onBroadcastDismissal = { dismissed, time, msg ->
                 viewModel.broadcastDismissal(dismissed, time, msg)
@@ -381,7 +447,8 @@ fun SchoolParentApp(viewModel: SchoolViewModel = viewModel()) {
               onSubmitPermission = { st, nt ->
                 viewModel.submitAttendancePermission(st, nt)
               },
-              onNavigateBack = { viewModel.navigateTo(AppScreen.HOME) }
+              onNavigateBack = { viewModel.navigateTo(AppScreen.HOME) },
+              onTestNotification = { viewModel.triggerTestAttendanceNotification() }
             )
 
             AppScreen.GALLERY -> GalleryScreen(
@@ -436,7 +503,8 @@ fun SchoolParentApp(viewModel: SchoolViewModel = viewModel()) {
               onDeleteAnnouncement = { id ->
                 viewModel.deleteAnnouncement(id)
               },
-              onNavigateBack = { viewModel.navigateTo(AppScreen.HOME) }
+              onNavigateBack = { viewModel.navigateTo(AppScreen.HOME) },
+              onTestNotification = { viewModel.triggerTestAnnouncementNotification() }
             )
           }
         }
